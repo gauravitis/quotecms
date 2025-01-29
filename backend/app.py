@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
 from supabase import create_client
 from dotenv import load_dotenv
@@ -6,8 +6,13 @@ import os
 from datetime import datetime
 from models.models import Company, Employee, Client, Quotation, Item
 from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL
 from io import BytesIO
 from werkzeug.utils import secure_filename
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 # Load environment variables
 load_dotenv()
@@ -31,21 +36,28 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize Supabase client
 try:
-    supabase = create_client(
-        os.getenv('SUPABASE_URL'),
-        os.getenv('SUPABASE_KEY')
-    )
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_KEY')
+    
+    if not supabase_url or not supabase_key:
+        raise ValueError("Supabase URL or Key not found in environment variables")
+    
+    supabase = create_client(supabase_url, supabase_key)
+    
     # Test the connection
-    supabase.table('companies').select('*').limit(1).execute()
+    test_response = supabase.table('companies').select('*').limit(1).execute()
     print("Successfully connected to Supabase!")
+except ValueError as e:
+    print(f"Configuration Error: {e}")
+    raise
 except Exception as e:
-    print(f"Error connecting to Supabase: {e}")
+    print(f"Error connecting to Supabase: {str(e)}")
     raise
 
 # Health check route
-@app.route('/api/health')
+@app.route('/api/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "healthy", "message": "API is running"})
+    return jsonify({"status": "healthy", "message": "API is running"}), 200
 
 # Company routes
 @app.route('/api/companies', methods=['GET'])
@@ -323,56 +335,272 @@ def generate_quote(quotation_id):
         # Create a new document
         doc = Document()
         
-        # Add letterhead
-        doc.add_heading('QUOTATION', 0)
+        # Add header table
+        header_table = doc.add_table(rows=4, cols=1)
+        header_table.style = 'Table Grid'
         
-        # Add company details
-        doc.add_paragraph(f"From: {company_data['name']}")
-        if company_data.get('email'):
-            doc.add_paragraph(f"Email: {company_data['email']}")
-        if company_data.get('address'):
-            doc.add_paragraph(f"Address: {company_data['address']}")
+        # Company Name Cell
+        company_cell = header_table.rows[0].cells[0]
+        company_name = company_cell.paragraphs[0]
+        company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        company_run = company_name.add_run(company_data['name'].upper() + " PVT. LTD.")
+        company_run.font.size = Pt(16)
+        company_run.font.bold = True
+        company_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Address Cell
+        address_cell = header_table.rows[1].cells[0]
+        address = address_cell.paragraphs[0]
+        address.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        address_run = address.add_run(company_data['address'].upper())
+        address_run.font.size = Pt(11)
+        address_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Email and Phone Cell
+        email_cell = header_table.rows[2].cells[0]
+        email = email_cell.paragraphs[0]
+        email.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        email_text = f"Email:- {company_data['email']} {company_data['phone']}"
+        email_run = email.add_run(email_text)
+        email_run.font.size = Pt(11)
+        email_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Tax Info Cell
+        tax_cell = header_table.rows[3].cells[0]
+        tax_info = tax_cell.paragraphs[0]
+        tax_info.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        tax_text = f"PAN NO.: {company_data['pan']} | GST NO.: {company_data['gst']}"
+        tax_run = tax_info.add_run(tax_text)
+        tax_run.font.size = Pt(11)
+        tax_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set background color for all cells and remove borders
+        for row in header_table.rows:
+            for cell in row.cells:
+                shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+                cell._tc.get_or_add_tcPr().append(shading_elm)
+                # Remove cell borders
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                    '<w:top w:val="nil"/>' +
+                                    '<w:left w:val="nil"/>' +
+                                    '<w:bottom w:val="nil"/>' +
+                                    '<w:right w:val="nil"/>' +
+                                    '</w:tcBorders>')
+                tcPr.append(tcBorders)
+
+        # Add QUOTATION/PERFORMA INVOICE title
+        title = doc.add_paragraph()
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title_run.font.bold = True
+        title_run.font.size = Pt(12)
+
+        # Add reference number and date
+        ref_date = doc.add_table(rows=1, cols=2)
+        ref_date.autofit = True
+        ref_cell = ref_date.cell(0, 0)
+        ref_cell.text = f"Ref No: {quotation_data['ref_number']}"
+        date_cell = ref_date.cell(0, 1)
+        date_cell.text = f"Date: {quotation_data['date'][:10]}"
+        date_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+        # Add spacing after header
+        doc.add_paragraph()
+
+        # Set default font size for the document
+        style = doc.styles['Normal']
+        style.font.size = Pt(9)
+
+        # Add client details
+        to_table = doc.add_table(rows=2, cols=1)
+        to_table.style = 'Table Grid'
+        
+        # To Cell with blue background
+        to_cell = to_table.rows[0].cells[0]
+        to_paragraph = to_cell.paragraphs[0]
+        to_run = to_paragraph.add_run('To')
+        to_run.font.bold = True
+        to_run.font.size = Pt(9)
+        to_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set blue background for To cell
+        shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        to_cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Client details cell
+        client = data.get('client', {})
+        details_cell = to_table.rows[1].cells[0]
+        details_paragraph = details_cell.paragraphs[0]
+        details_paragraph.add_run(f"{client.get('business_name', '')}\n")
+        details_paragraph.add_run(f"{client.get('address', '')}\n")
+        details_paragraph.add_run(f"Kind Attn: {client.get('name', '')} | Tel: {client.get('phone', '')} | Email: {client.get('email', '')}")
+        
+        # Remove borders from both cells
+        for row in to_table.rows:
+            for cell in row.cells:
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                    '<w:top w:val="nil"/>' +
+                                    '<w:left w:val="nil"/>' +
+                                    '<w:bottom w:val="nil"/>' +
+                                    '<w:right w:val="nil"/>' +
+                                    '</w:tcBorders>')
+                tcPr.append(tcBorders)
+        
+        # Add spacing after client details
+        doc.add_paragraph()
+        
+        # Add greeting text
+        greeting = doc.add_paragraph()
+        greeting.add_run("Dear Sir/Madam,\n")
+        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:\n")
+        
+        # Add spacing after greeting
+        doc.add_paragraph()
+        
+        # Add items table
+        doc.add_paragraph().add_run('Items:').bold = True
+        table = doc.add_table(rows=1, cols=14)  # Changed to 14 columns
+        table.style = 'Table Grid'
+        
+        # Set header row
+        header_cells = table.rows[0].cells
+        headers = ['S.No', 'Cat No.', 'Description', 'Pack Size', 'HSN Code', 'Qty', 'Unit Rate', 'Discounted Price', 'Expanded Price', 'GST %', 'GST', 'Total Value', 'Lead Time', 'Brand']
+        for i, text in enumerate(headers):
+            header_cells[i].text = text
+            header_cells[i].paragraphs[0].runs[0].bold = True
+            header_cells[i].paragraphs[0].runs[0].font.size = Pt(8)  # Set header font size
+            header_cells[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add item rows
+        items = data.get('items', [])
+        for idx, item in enumerate(items, 1):
+            row = table.add_row().cells
+            row[0].text = str(idx)  # S.No
+            row[1].text = item.get('catalogue_id', '')  # Cat No.
+            row[2].text = item.get('description', '')  # Description
+            row[3].text = item.get('pack_size', '')  # Pack Size
+            row[4].text = item.get('hsn', '')  # HSN Code
+            row[5].text = str(item.get('quantity', ''))  # Qty
+            row[6].text = f"₹{item.get('unit_rate', 0):.2f}"  # Unit Rate
             
-        # Add quotation details
-        doc.add_paragraph(f"Reference Number: {quotation_data['ref_number']}")
-        doc.add_paragraph(f"Date: {quotation_data['date'][:10]}")  # Only show date part
-        
-        # Add items section
-        doc.add_heading('Items', level=1)
-        items_table = doc.add_table(rows=1, cols=4)
-        items_table.style = 'Table Grid'
-        header_cells = items_table.rows[0].cells
-        header_cells[0].text = 'Item'
-        header_cells[1].text = 'Quantity'
-        header_cells[2].text = 'Price'
-        header_cells[3].text = 'Total'
-        
-        # Add items
-        items = quotation_data.get('items', [])
-        for item in items:
-            row_cells = items_table.add_row().cells
-            row_cells[0].text = str(item.get('name', ''))
-            row_cells[1].text = str(item.get('qty', 0))
-            price = float(str(item.get('price', 0)).replace('$', '').replace(',', ''))
-            row_cells[2].text = f"${price:.2f}"
-            total = price * float(item.get('qty', 0))
-            row_cells[3].text = f"${total:.2f}"
+            # Calculate discounted price
+            unit_rate = float(item.get('unit_rate', 0))
+            discount = float(item.get('discount_percentage', 0))
+            discounted_price = unit_rate * (1 - discount/100)
+            row[7].text = f"₹{discounted_price:.2f}"  # Discounted Price
             
-        # Add total
-        total = float(str(quotation_data.get('total', 0)).replace('$', '').replace(',', ''))
-        doc.add_paragraph(f"\nTotal Amount: ${total:.2f}")
+            # Calculate expanded price (discounted price * quantity)
+            quantity = float(item.get('quantity', 0))
+            expanded_price = discounted_price * quantity
+            row[8].text = f"₹{expanded_price:.2f}"  # Expanded Price
+            
+            row[9].text = f"{item.get('gst_percentage', 0)}%"  # GST %
+            row[10].text = f"₹{item.get('gst_value', 0):.2f}"  # GST
+            row[11].text = f"₹{item.get('total', 0):.2f}"  # Total Value
+            row[12].text = item.get('lead_time', '')  # Lead Time
+            row[13].text = item.get('brand', '')  # Changed from 'make' to 'brand'
+            
+            # Center align all cells
+            for cell in row:
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # Save to buffer and return
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
+        # Set optimized column widths for better fit
+        for cell in table.columns[0].cells:  # S.No
+            cell.width = Inches(0.2)
+        for cell in table.columns[1].cells:  # Cat No.
+            cell.width = Inches(0.6)
+        for cell in table.columns[2].cells:  # Description
+            cell.width = Inches(1.8)
+        for cell in table.columns[3].cells:  # Pack Size
+            cell.width = Inches(0.4)
+        for cell in table.columns[4].cells:  # HSN Code
+            cell.width = Inches(0.6)
+        for cell in table.columns[5].cells:  # Qty
+            cell.width = Inches(0.3)
+        for cell in table.columns[6].cells:  # Unit Rate
+            cell.width = Inches(0.6)
+        for cell in table.columns[7].cells:  # Discounted Price
+            cell.width = Inches(0.6)
+        for cell in table.columns[8].cells:  # Expanded Price
+            cell.width = Inches(0.6)
+        for cell in table.columns[9].cells:  # GST %
+            cell.width = Inches(0.4)
+        for cell in table.columns[10].cells:  # GST
+            cell.width = Inches(0.6)
+        for cell in table.columns[11].cells:  # Total Value
+            cell.width = Inches(0.6)
+        for cell in table.columns[12].cells:  # Lead Time
+            cell.width = Inches(0.6)
+        for cell in table.columns[13].cells:  # Brand
+            cell.width = Inches(0.5)
         
-        return send_file(
-            buffer,
-            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            as_attachment=True,
-            download_name=f'quote_{quotation_data["ref_number"]}.docx'
-        )
+        # Add totals
+        doc.add_paragraph()
+        totals = doc.add_paragraph()
+        totals.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        totals.add_run(f"Sub Total: ₹{data.get('total', 0):.2f}\n")
+        totals.add_run(f"Total GST: ₹{data.get('totalGST', 0):.2f}\n")
+        grand_total = totals.add_run(f"Grand Total: ₹{data.get('total', 0):.2f}")
+        grand_total.bold = True
+        
+        # Add terms and conditions
+        terms_table = doc.add_table(rows=1, cols=1)
+        terms_table.style = 'Table Grid'
+        
+        # Terms & Conditions header cell with blue background
+        header_cell = terms_table.rows[0].cells[0]
+        header_paragraph = header_cell.paragraphs[0]
+        header_run = header_paragraph.add_run('Terms & Conditions')
+        header_run.font.bold = True
+        header_run.font.color.rgb = RGBColor(255, 255, 255)
+        header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        header_cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Remove borders from the header cell
+        tcPr = header_cell._tc.get_or_add_tcPr()
+        tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        tcPr.append(tcBorders)
+        
+        # Add payment terms and other terms as bullet points
+        terms_list = doc.add_paragraph()
+        terms_list.style = doc.styles['Normal']
+        terms_list.paragraph_format.space_before = Pt(6)
+        
+        # Add payment terms
+        payment_term = terms_list.add_run(f"1) {data.get('paymentTerms', '')}\n")
+        payment_term.font.size = Pt(8)
+        
+        # Add fixed terms with numbering
+        for idx, term in enumerate(data.get('fixedTerms', []), 2):
+            term_text = terms_list.add_run(f"{idx}) {term}\n")
+            term_text.font.size = Pt(8)
+        
+        # Add signature
+        doc.add_paragraph('\n')
+        signature = doc.add_paragraph()
+        signature.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        signature.add_run('Authorized Signatory')
+        
+        # Save the document
+        filename = f"quote_{quotation_data['ref_number']}.docx"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        doc.save(filepath)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Quotation generated successfully',
+            'filename': filename
+        })
         
     except Exception as e:
         print("Error generating quote:", str(e))  # Debug log
@@ -634,6 +862,321 @@ def internal_error(error):
         "success": False,
         "error": "Internal server error"
     }), 500
+
+@app.route('/api/generate-quotation', methods=['POST'])
+def generate_quotation():
+    try:
+        data = request.json
+        
+        # Create a new Word document
+        doc = Document()
+        
+        # Set very narrow margins
+        sections = doc.sections
+        for section in sections:
+            section.top_margin = Inches(0.3)    # 0.3 inch top margin
+            section.bottom_margin = Inches(0.3)  # 0.3 inch bottom margin
+            section.left_margin = Inches(0.3)    # 0.3 inch left margin
+            section.right_margin = Inches(0.3)   # 0.3 inch right margin
+        
+        # Set default font size for the document
+        style = doc.styles['Normal']
+        style.font.size = Pt(8)  # Changed from 9 to 8
+        
+        # Add header table
+        header_table = doc.add_table(rows=4, cols=1)
+        header_table.style = 'Table Grid'
+        
+        # Company Name Cell
+        company_cell = header_table.rows[0].cells[0]
+        company_name = company_cell.paragraphs[0]
+        company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        company_run = company_name.add_run(data.get('company', {}).get('name', '').upper() + " PVT. LTD.")
+        company_run.font.size = Pt(14)  # Slightly reduced from 16
+        company_run.font.bold = True
+        company_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Address Cell
+        address_cell = header_table.rows[1].cells[0]
+        address = address_cell.paragraphs[0]
+        address.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        address_run = address.add_run(data.get('company', {}).get('address', '').upper())
+        address_run.font.size = Pt(11)
+        address_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Email and Phone Cell
+        email_cell = header_table.rows[2].cells[0]
+        email = email_cell.paragraphs[0]
+        email.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        email_text = f"Email:- {data.get('company', {}).get('email', '')} {data.get('company', {}).get('phone', '')}"
+        email_run = email.add_run(email_text)
+        email_run.font.size = Pt(11)
+        email_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Tax Info Cell
+        tax_cell = header_table.rows[3].cells[0]
+        tax_info = tax_cell.paragraphs[0]
+        tax_info.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        pan = data.get('company', {}).get('pan_number', '')  # Changed from 'pan' to 'pan_number'
+        gst = data.get('company', {}).get('gst_number', '')  # Changed from 'gst' to 'gst_number'
+        tax_text = f"PAN NO.: {pan} | GST NO.: {gst}"
+        tax_run = tax_info.add_run(tax_text)
+        tax_run.font.size = Pt(11)
+        tax_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set background color for all cells and remove borders
+        for row in header_table.rows:
+            for cell in row.cells:
+                shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+                cell._tc.get_or_add_tcPr().append(shading_elm)
+                # Remove cell borders
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                    '<w:top w:val="nil"/>' +
+                                    '<w:left w:val="nil"/>' +
+                                    '<w:bottom w:val="nil"/>' +
+                                    '<w:right w:val="nil"/>' +
+                                    '</w:tcBorders>')
+                tcPr.append(tcBorders)
+
+        # Add QUOTATION/PERFORMA INVOICE title
+        title = doc.add_paragraph()
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title_run.font.bold = True
+        title_run.font.size = Pt(12)
+
+        # Add reference number and date
+        ref_date = doc.add_table(rows=1, cols=2)
+        ref_date.autofit = True
+        ref_cell = ref_date.cell(0, 0)
+        ref_cell.text = f"Ref No: {data.get('refNumber', '')}"
+        date_cell = ref_date.cell(0, 1)
+        date_cell.text = f"Date: {data.get('quotationDate', '')}"
+        date_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+        # Add spacing after header
+        doc.add_paragraph()
+
+        # Set default font size for the document
+        style = doc.styles['Normal']
+        style.font.size = Pt(9)
+
+        # Add client details
+        to_table = doc.add_table(rows=2, cols=1)
+        to_table.style = 'Table Grid'
+        
+        # To Cell with blue background
+        to_cell = to_table.rows[0].cells[0]
+        to_paragraph = to_cell.paragraphs[0]
+        to_run = to_paragraph.add_run('To')
+        to_run.font.bold = True
+        to_run.font.size = Pt(9)
+        to_run.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set blue background for To cell
+        shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        to_cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Client details cell
+        client = data.get('client', {})
+        details_cell = to_table.rows[1].cells[0]
+        details_paragraph = details_cell.paragraphs[0]
+        details_paragraph.add_run(f"{client.get('business_name', '')}\n")
+        details_paragraph.add_run(f"{client.get('address', '')}\n")
+        details_paragraph.add_run(f"Kind Attn: {client.get('name', '')} | Tel: {client.get('phone', '')} | Email: {client.get('email', '')}")
+        
+        # Remove borders from both cells
+        for row in to_table.rows:
+            for cell in row.cells:
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                    '<w:top w:val="nil"/>' +
+                                    '<w:left w:val="nil"/>' +
+                                    '<w:bottom w:val="nil"/>' +
+                                    '<w:right w:val="nil"/>' +
+                                    '</w:tcBorders>')
+                tcPr.append(tcBorders)
+        
+        # Add spacing after client details
+        doc.add_paragraph()
+        
+        # Add greeting text
+        greeting = doc.add_paragraph()
+        greeting.add_run("Dear Sir/Madam,\n")
+        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:\n")
+        
+        # Add spacing after greeting
+        doc.add_paragraph()
+        
+        # Add items table
+        doc.add_paragraph().add_run('Items:').bold = True
+        table = doc.add_table(rows=1, cols=14)
+        table.style = 'Table Grid'
+        table.allow_autofit = True  # Enable auto-fitting
+        
+        # Set header row with smaller font
+        header_cells = table.rows[0].cells
+        headers = ['S.No', 'Cat No.', 'Description', 'Pack Size', 'HSN Code', 'Qty', 'Unit Rate', 'Discounted Price', 'Expanded Price', 'GST %', 'GST', 'Total Value', 'Lead Time', 'Brand']
+        for i, text in enumerate(headers):
+            header_cells[i].text = text
+            header_cells[i].paragraphs[0].runs[0].bold = True
+            header_cells[i].paragraphs[0].runs[0].font.size = Pt(8)  # Set header font size
+            header_cells[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Add item rows
+        items = data.get('items', [])
+        for idx, item in enumerate(items, 1):
+            row = table.add_row().cells
+            row[0].text = str(idx)  # S.No
+            row[1].text = item.get('catalogue_id', '')  # Cat No.
+            row[2].text = item.get('description', '')  # Description
+            row[3].text = item.get('pack_size', '')  # Pack Size
+            row[4].text = item.get('hsn', '')  # HSN Code
+            row[5].text = str(item.get('quantity', ''))  # Qty
+            row[6].text = f"₹{item.get('unit_rate', 0):.2f}"  # Unit Rate
+            
+            # Calculate discounted price
+            unit_rate = float(item.get('unit_rate', 0))
+            discount = float(item.get('discount_percentage', 0))
+            discounted_price = unit_rate * (1 - discount/100)
+            row[7].text = f"₹{discounted_price:.2f}"  # Discounted Price
+            
+            # Calculate expanded price (discounted price * quantity)
+            quantity = float(item.get('quantity', 0))
+            expanded_price = discounted_price * quantity
+            row[8].text = f"₹{expanded_price:.2f}"  # Expanded Price
+            
+            row[9].text = f"{item.get('gst_percentage', 0)}%"  # GST %
+            row[10].text = f"₹{item.get('gst_value', 0):.2f}"  # GST
+            row[11].text = f"₹{item.get('total', 0):.2f}"  # Total Value
+            row[12].text = item.get('lead_time', '')  # Lead Time
+            row[13].text = item.get('brand', '')  # Changed from 'make' to 'brand'
+            
+            # Center align all cells
+            for cell in row:
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Set optimized column widths for better fit
+        for cell in table.columns[0].cells:  # S.No
+            cell.width = Inches(0.2)
+        for cell in table.columns[1].cells:  # Cat No.
+            cell.width = Inches(0.6)
+        for cell in table.columns[2].cells:  # Description
+            cell.width = Inches(1.8)
+        for cell in table.columns[3].cells:  # Pack Size
+            cell.width = Inches(0.4)
+        for cell in table.columns[4].cells:  # HSN Code
+            cell.width = Inches(0.6)
+        for cell in table.columns[5].cells:  # Qty
+            cell.width = Inches(0.3)
+        for cell in table.columns[6].cells:  # Unit Rate
+            cell.width = Inches(0.6)
+        for cell in table.columns[7].cells:  # Discounted Price
+            cell.width = Inches(0.6)
+        for cell in table.columns[8].cells:  # Expanded Price
+            cell.width = Inches(0.6)
+        for cell in table.columns[9].cells:  # GST %
+            cell.width = Inches(0.4)
+        for cell in table.columns[10].cells:  # GST
+            cell.width = Inches(0.6)
+        for cell in table.columns[11].cells:  # Total Value
+            cell.width = Inches(0.6)
+        for cell in table.columns[12].cells:  # Lead Time
+            cell.width = Inches(0.6)
+        for cell in table.columns[13].cells:  # Brand
+            cell.width = Inches(0.5)
+        
+        # Add totals
+        doc.add_paragraph()
+        totals = doc.add_paragraph()
+        totals.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        totals.add_run(f"Sub Total: ₹{data.get('subTotal', 0):.2f}\n")
+        totals.add_run(f"Total GST: ₹{data.get('totalGST', 0):.2f}\n")
+        grand_total = totals.add_run(f"Grand Total: ₹{data.get('grandTotal', 0):.2f}")
+        grand_total.bold = True
+        
+        # Add terms and conditions
+        terms_table = doc.add_table(rows=1, cols=1)
+        terms_table.style = 'Table Grid'
+        
+        # Terms & Conditions header cell with blue background
+        header_cell = terms_table.rows[0].cells[0]
+        header_paragraph = header_cell.paragraphs[0]
+        header_run = header_paragraph.add_run('Terms & Conditions')
+        header_run.font.bold = True
+        header_run.font.color.rgb = RGBColor(255, 255, 255)
+        header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        header_cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Remove borders from the header cell
+        tcPr = header_cell._tc.get_or_add_tcPr()
+        tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        tcPr.append(tcBorders)
+        
+        # Add payment terms and other terms as bullet points
+        terms_list = doc.add_paragraph()
+        terms_list.style = doc.styles['Normal']
+        terms_list.paragraph_format.space_before = Pt(6)
+        
+        # Add payment terms
+        payment_term = terms_list.add_run(f"1) {data.get('paymentTerms', '')}\n")
+        payment_term.font.size = Pt(8)
+        
+        # Add fixed terms with numbering
+        for idx, term in enumerate(data.get('fixedTerms', []), 2):
+            term_text = terms_list.add_run(f"{idx}) {term}\n")
+            term_text.font.size = Pt(8)
+        
+        # Add signature
+        doc.add_paragraph('\n')
+        signature = doc.add_paragraph()
+        signature.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        signature.add_run('Authorized Signatory')
+        
+        # Save the document
+        filename = f"quotation_{data.get('refNumber', 'temp').replace('/', '_')}.docx"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        doc.save(filepath)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Quotation generated successfully',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/download-quotation/<filename>', methods=['GET'])
+def download_quotation(filename):
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 404
+
+# Add debug route to check environment variables
+@app.route('/api/debug/config', methods=['GET'])
+def debug_config():
+    return jsonify({
+        "supabase_url_exists": bool(os.getenv('SUPABASE_URL')),
+        "supabase_key_exists": bool(os.getenv('SUPABASE_KEY')),
+        "secret_key_exists": bool(os.getenv('SECRET_KEY'))
+    }), 200
 
 if __name__ == '__main__':
     print("Starting Flask server on port 5000...")

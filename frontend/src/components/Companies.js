@@ -51,6 +51,7 @@ export default function Companies() {
         account_number: '',
         ifsc_code: '',
         account_type: 'Current Account',
+        phone: '',
     });
 
     useEffect(() => {
@@ -89,6 +90,7 @@ export default function Companies() {
                 account_number: company.account_number || '',
                 ifsc_code: company.ifsc_code || '',
                 account_type: company.account_type || 'Current Account',
+                phone: company.phone || '',
             });
         } else {
             setSelectedCompany(null);
@@ -104,6 +106,7 @@ export default function Companies() {
                 account_number: '',
                 ifsc_code: '',
                 account_type: 'Current Account',
+                phone: '',
             });
         }
         setOpenDialog(true);
@@ -124,6 +127,7 @@ export default function Companies() {
             account_number: '',
             ifsc_code: '',
             account_type: 'Current Account',
+            phone: '',
         });
     };
 
@@ -328,11 +332,12 @@ export default function Companies() {
                 </DialogTitle>
                 <form onSubmit={handleSubmit}>
                     <DialogContent>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
                                     label="Company Name"
+                                    name="name"
                                     value={formData.name}
                                     onChange={(e) =>
                                         setFormData({ ...formData, name: e.target.value })
@@ -344,54 +349,76 @@ export default function Companies() {
                                 <TextField
                                     fullWidth
                                     label="Email"
+                                    name="email"
                                     type="email"
                                     value={formData.email}
                                     onChange={(e) =>
                                         setFormData({ ...formData, email: e.target.value })
                                     }
+                                    required
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
-                                    label="Reference Format"
-                                    value={formData.ref_format}
+                                    label="Phone Number"
+                                    name="phone"
+                                    value={formData.phone}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, ref_format: e.target.value })
+                                        setFormData({ ...formData, phone: e.target.value })
                                     }
-                                    helperText="Use {YYYY} for year and {NUM} for number"
+                                    required
                                 />
                             </Grid>
                             <Grid item xs={12}>
                                 <TextField
                                     fullWidth
                                     label="Address"
+                                    name="address"
                                     multiline
                                     rows={3}
                                     value={formData.address}
                                     onChange={(e) =>
                                         setFormData({ ...formData, address: e.target.value })
                                     }
+                                    required
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
                                     label="GST Number"
+                                    name="gst_number"
                                     value={formData.gst_number}
                                     onChange={(e) =>
                                         setFormData({ ...formData, gst_number: e.target.value })
                                     }
+                                    required
                                 />
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
                                     label="PAN Number"
+                                    name="pan_number"
                                     value={formData.pan_number}
                                     onChange={(e) =>
                                         setFormData({ ...formData, pan_number: e.target.value })
                                     }
+                                    required
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Reference Format"
+                                    name="ref_format"
+                                    value={formData.ref_format}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, ref_format: e.target.value })
+                                    }
+                                    helperText="Use {YYYY} for year and {NUM} for number"
+                                    required
                                 />
                             </Grid>
                             <Grid item xs={12}>

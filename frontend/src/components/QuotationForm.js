@@ -209,6 +209,52 @@ export default function QuotationForm() {
         }
     };
 
+    // Handle quotation generation
+    const handleGenerateQuotation = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Prepare data for the quotation
+            const quotationData = {
+                company: selectedCompany,
+                employee: selectedEmployee,
+                client: selectedClient,
+                refNumber,
+                quotationDate,
+                items: quotationItems,
+                subTotal,
+                totalGST,
+                grandTotal,
+                paymentTerms,
+                fixedTerms
+            };
+
+            // Generate the quotation document
+            const response = await fetch('http://localhost:5000/api/generate-quotation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(quotationData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Download the generated document
+                window.open(`http://localhost:5000/api/download-quotation/${result.filename}`, '_blank');
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -523,11 +569,10 @@ export default function QuotationForm() {
                 <Button
                     variant="contained"
                     size="large"
-                    onClick={() => {
-                        // Handle quotation submission
-                    }}
+                    onClick={handleGenerateQuotation}
+                    disabled={loading || !selectedCompany || !selectedEmployee || !selectedClient || quotationItems.length === 0}
                 >
-                    Generate Quotation
+                    {loading ? <CircularProgress size={24} /> : 'Generate Quotation'}
                 </Button>
             </Box>
         </Container>

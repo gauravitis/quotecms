@@ -1,24 +1,31 @@
 from datetime import datetime
 
 class Company:
+    def __init__(self, id, name, email, address, ref_format, last_quote_number, seal_image_url=None, pan_number=None, gst_number=None, phone=None):
+        self.id = id
+        self.name = name
+        self.email = email
+        self.address = address
+        self.ref_format = ref_format
+        self.last_quote_number = last_quote_number
+        self.seal_image_url = seal_image_url
+        self.pan_number = pan_number
+        self.gst_number = gst_number
+        self.phone = phone
+
     @staticmethod
-    def from_db(data):
+    def from_db(db_company):
         return {
-            'id': data.get('id'),
-            'name': data.get('name'),
-            'email': data.get('email'),
-            'address': data.get('address'),
-            'gst_number': data.get('gst_number'),
-            'pan_number': data.get('pan_number'),
-            'seal_image_url': data.get('seal_image_url'),
-            'ref_format': data.get('ref_format', 'QT-{YYYY}-{NUM}'),
-            'last_quote_number': data.get('last_quote_number', 0),
-            'bank_name': data.get('bank_name'),
-            'account_number': data.get('account_number'),
-            'ifsc_code': data.get('ifsc_code'),
-            'account_type': data.get('account_type', 'Current Account'),
-            'created_at': data.get('created_at'),
-            'updated_at': data.get('updated_at')
+            'id': db_company['id'],
+            'name': db_company['name'],
+            'email': db_company['email'],
+            'address': db_company['address'],
+            'ref_format': db_company['ref_format'],
+            'last_quote_number': db_company['last_quote_number'],
+            'seal_image_url': db_company.get('seal_image_url'),
+            'pan_number': db_company.get('pan_number'),
+            'gst_number': db_company.get('gst_number'),
+            'phone': db_company.get('phone')
         }
 
 class Employee:
