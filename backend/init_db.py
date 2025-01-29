@@ -13,56 +13,56 @@ supabase = create_client(
 
 def init_database():
     try:
-        # Create all tables in a single SQL statement
-        create_tables = """
-        -- Create companies table
-        create table if not exists companies (
-            id bigint primary key generated always as identity,
-            name text not null,
-            email text,
-            address text,
-            seal_image_url text,
-            ref_format text default 'QT-{YYYY}-{NUM}',
-            last_quote_number int default 0
-        );
-
-        -- Create clients table
-        create table if not exists clients (
-            id bigint primary key generated always as identity,
-            company_id bigint references companies(id),
-            name text not null,
-            email text,
-            address text
-        );
-
-        -- Create quotations table
-        create table if not exists quotations (
-            id bigint primary key generated always as identity,
-            company_id bigint references companies(id),
-            client_id bigint references clients(id),
-            ref_number text not null,
-            date timestamp default current_timestamp,
-            items jsonb,
-            total numeric(10,2)
-        );
-
-        -- Create RPC function for atomic quote number updates
-        create or replace function increment_quote_number(company_id bigint, current_number int)
-        returns void as $$
-        begin
-            update companies
-            set last_quote_number = current_number + 1
-            where id = company_id
-            and last_quote_number = current_number;
-        end;
-        $$ language plpgsql;
-        """
+        # Update companies table schema
+        companies_data = {
+            "name": "Test Company",
+            "email": "test@example.com",
+            "address": "Test Address",
+            "gst_number": "TEST123",
+            "pan_number": "TEST456",
+            "seal_image_url": None,
+            "ref_format": "QT-{YYYY}-{NUM}",
+            "last_quote_number": 0
+        }
         
-        # Execute the SQL using the REST API
-        response = supabase.rest.sql().execute(create_tables)
-        print("Database tables and functions created successfully!")
-        print(response)
+        # Try to insert a test record to verify schema
+        try:
+            response = supabase.table('companies').insert(companies_data).execute()
+            print("Companies table schema verified!")
+            
+            # Clean up test data
+            if response.data:
+                supabase.table('companies').delete().eq('id', response.data[0]['id']).execute()
+                
+        except Exception as e:
+            print(f"Error with companies table: {str(e)}")
+            print("Please run the following SQL in your Supabase SQL editor:")
+            print("""
+            -- Update companies table
+            alter table companies 
+            add column if not exists gst_number text,
+            add column if not exists pan_number text,
+            add column if not exists created_at timestamp with time zone default current_timestamp,
+            add column if not exists updated_at timestamp with time zone default current_timestamp;
+            
+            -- Create updated_at trigger
+            create or replace function update_updated_at_column()
+            returns trigger as $$
+            begin
+                new.updated_at = current_timestamp;
+                return new;
+            end;
+            $$ language plpgsql;
 
+            drop trigger if exists update_companies_updated_at on companies;
+            create trigger update_companies_updated_at
+                before update on companies
+                for each row
+                execute function update_updated_at_column();
+            """)
+            
+        print("Database initialization completed!")
+        
     except Exception as e:
         print(f"Error initializing database: {e}")
 

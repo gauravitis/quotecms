@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import QuotationForm from './components/QuotationForm';
+import Companies from './components/Companies';
+import Employees from './components/Employees';
+import Clients from './components/Clients';
+import Items from './components/Items';
 import { ThemeProvider, createTheme } from '@mui/material';
 
 // Create a custom theme
@@ -55,10 +59,11 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/companies" element={<Companies />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/clients" element={<Clients />} />
+          <Route path="/items" element={<Items />} />
           <Route path="/quotations" element={<QuotationForm />} />
-          {/* Add placeholder routes for future implementation */}
-          <Route path="/companies" element={<div>Companies Page (Coming Soon)</div>} />
-          <Route path="/employees" element={<div>Employees Page (Coming Soon)</div>} />
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,140 +1,114 @@
-# ChemBio Lifesciences - Quote Management System
+# Quote Manager
 
-![ChemBio Lifesciences](https://img.shields.io/badge/ChemBio-Lifesciences-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+A comprehensive quotation management system for ChemBio Lifesciences, built with React and Flask.
 
-A modern, full-stack web application for managing quotations and internal operations at ChemBio Lifesciences. This system provides a streamlined approach to creating, managing, and tracking quotations with a beautiful, responsive user interface.
+## Features
 
-## 🚀 Features
+- Company Management
+- Employee Directory
+- Client Management
+- Product/Item Catalog
+- Quotation Generation
+- Automatic GST calculation based on HSN codes
+- Company seal image upload
+- PDF quotation generation
 
-- **Modern Landing Page**
-  - Professional animations and transitions
-  - Secure access warning
-  - Responsive design
-
-- **Dashboard**
-  - Company management
-  - Employee directory
-  - Quotation system
-
-- **Quotation System**
-  - Create and manage quotations
-  - Dynamic item management
-  - Automatic PDF generation
-  - Reference number tracking
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
-- **React.js** - UI library
-- **Material-UI (MUI)** - Component library
-- **React Router** - Navigation
-- **Emotion** - Styling
-- **Axios** - API requests
+- React
+- Material-UI
+- React Router
+- Modern JavaScript (ES6+)
 
 ### Backend
-- **Python Flask** - Web framework
-- **Supabase** - Database and authentication
-- **python-docx** - Document generation
-- **Flask-CORS** - Cross-origin resource sharing
+- Flask (Python)
+- Supabase (Database)
+- Python-DOCX (Document Generation)
 
-### Development Tools
-- **ESLint** - Code linting
-- **Git** - Version control
-- **npm** - Package management
-- **pip** - Python package management
-
-## 🏗️ Architecture
-
-The application follows a modern client-server architecture:
-
-```
-frontend/                 # React frontend application
-├── src/
-│   ├── components/      # React components
-│   ├── api/            # API integration
-│   └── assets/         # Static assets
-│
-backend/                 # Flask backend application
-├── app.py              # Main application file
-├── models/             # Data models
-└── templates/          # Document templates
-```
-
-## 🚀 Getting Started
+## Setup
 
 ### Prerequisites
 - Node.js (v14 or higher)
-- Python (v3.8 or higher)
-- npm or yarn
-- pip
+- Python 3.8 or higher
+- Supabase account
 
-### Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/gauravitis/quotecms.git
-cd quotecms
-```
-
-2. Install frontend dependencies
-```bash
-cd frontend
-npm install
-```
-
-3. Install backend dependencies
+### Backend Setup
+1. Navigate to the backend directory:
 ```bash
 cd backend
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 
-4. Set up environment variables
-```bash
-# Create .env file in backend directory
+4. Create a .env file with your Supabase credentials:
+```
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
 SECRET_KEY=your_secret_key
 ```
 
-5. Run the application
+5. Run the server:
 ```bash
-# Terminal 1 - Frontend
-cd frontend
-npm start
-
-# Terminal 2 - Backend
-cd backend
 python app.py
 ```
 
-## 👨‍💻 About the Author
+### Frontend Setup
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
 
-### Gaurav Singh
-A passionate full-stack developer with expertise in building modern web applications. With a strong foundation in both frontend and backend technologies, I specialize in creating efficient, scalable, and user-friendly solutions.
+2. Install dependencies:
+```bash
+npm install
+```
 
-#### Skills
-- Frontend Development (React.js, Vue.js)
-- Backend Development (Python, Node.js)
-- Database Design (PostgreSQL, MongoDB)
-- Cloud Services (AWS, GCP)
-- DevOps & CI/CD
+3. Start the development server:
+```bash
+npm start
+```
 
-#### Connect with Me
-- [GitHub](https://github.com/gauravitis)
-- [LinkedIn](https://linkedin.com/in/gauravitis)
-- [Portfolio](https://gauravitis.dev)
+## Project Structure
 
-## 📄 License
+```
+.
+├── backend/
+│   ├── app.py              # Main Flask application
+│   ├── models/             # Database models
+│   ├── uploads/            # Upload directory for images
+│   └── requirements.txt    # Python dependencies
+│
+└── frontend/
+    ├── src/
+    │   ├── components/     # React components
+    │   ├── App.js         # Main React application
+    │   └── index.js       # Entry point
+    ├── public/            # Static files
+    └── package.json       # Node.js dependencies
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Database Schema
 
-## 🤝 Contributing
+The application uses Supabase with the following main tables:
+- companies
+- employees
+- clients
+- items
+- quotations
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Contributing
 
-1. Fork the project
+1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
