@@ -326,13 +326,6 @@ export default function QuotationForm() {
                                 <TableCell>Pack Size</TableCell>
                                 <TableCell>Quantity</TableCell>
                                 <TableCell>HSN</TableCell>
-                                <TableCell>Unit Rate</TableCell>
-                                <TableCell>Discount %</TableCell>
-                                <TableCell>Discount Rate</TableCell>
-                                <TableCell>Expanded Rate</TableCell>
-                                <TableCell>GST %</TableCell>
-                                <TableCell>GST Value</TableCell>
-                                <TableCell>Total</TableCell>
                                 <TableCell>Lead Time</TableCell>
                                 <TableCell>Brand</TableCell>
                                 <TableCell>Actions</TableCell>
@@ -340,128 +333,151 @@ export default function QuotationForm() {
                         </TableHead>
                         <TableBody>
                             {quotationItems.map((item, index) => (
-                                <TableRow key={item.id}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>
-                                        <Autocomplete
-                                            options={items}
-                                            getOptionLabel={(option) => option.catalogue_id || ''}
-                                            onChange={(_, newValue) => handleItemSelect(index, newValue)}
-                                            renderInput={(params) => (
-                                                <TextField {...params} size="small" />
-                                            )}
-                                            sx={{ width: 150 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.description}
-                                            onChange={(e) => updateItemCalculations(index, 'description', e.target.value)}
-                                            size="small"
-                                            multiline
-                                            maxRows={3}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.pack_size}
-                                            onChange={(e) => updateItemCalculations(index, 'pack_size', e.target.value)}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            type="number"
-                                            value={item.quantity}
-                                            onChange={(e) => updateItemCalculations(index, 'quantity', Number(e.target.value))}
-                                            size="small"
-                                            sx={{ width: 80 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.hsn}
-                                            onChange={(e) => updateItemCalculations(index, 'hsn', e.target.value)}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            type="number"
-                                            value={item.unit_rate}
-                                            onChange={(e) => updateItemCalculations(index, 'unit_rate', Number(e.target.value))}
-                                            size="small"
-                                            sx={{ width: 100 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            type="number"
-                                            value={item.discount_percentage}
-                                            onChange={(e) => updateItemCalculations(index, 'discount_percentage', Number(e.target.value))}
-                                            size="small"
-                                            sx={{ width: 80 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.discount_rate.toFixed(2)}
-                                            size="small"
-                                            disabled
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.expanded_rate.toFixed(2)}
-                                            size="small"
-                                            disabled
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.gst_percentage}
-                                            size="small"
-                                            disabled
-                                            sx={{ width: 80 }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.gst_value.toFixed(2)}
-                                            size="small"
-                                            disabled
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.total.toFixed(2)}
-                                            size="small"
-                                            disabled
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.lead_time}
-                                            onChange={(e) => updateItemCalculations(index, 'lead_time', e.target.value)}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <TextField
-                                            value={item.brand}
-                                            size="small"
-                                            disabled
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <IconButton
-                                            color="error"
-                                            onClick={() => removeQuotationItem(index)}
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </TableCell>
-                                </TableRow>
+                                <React.Fragment key={item.id}>
+                                    {/* Main item row */}
+                                    <TableRow>
+                                        <TableCell>{index + 1}</TableCell>
+                                        <TableCell>
+                                            <Autocomplete
+                                                options={items}
+                                                getOptionLabel={(option) => option.catalogue_id || ''}
+                                                onChange={(_, newValue) => handleItemSelect(index, newValue)}
+                                                renderInput={(params) => (
+                                                    <TextField {...params} size="small" />
+                                                )}
+                                                sx={{ width: 150 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                value={item.description}
+                                                onChange={(e) => updateItemCalculations(index, 'description', e.target.value)}
+                                                size="small"
+                                                multiline
+                                                maxRows={3}
+                                                sx={{ minWidth: 200 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                value={item.pack_size}
+                                                onChange={(e) => updateItemCalculations(index, 'pack_size', e.target.value)}
+                                                size="small"
+                                                sx={{ width: 100 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                type="number"
+                                                value={item.quantity}
+                                                onChange={(e) => updateItemCalculations(index, 'quantity', Number(e.target.value))}
+                                                size="small"
+                                                sx={{ width: 80 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                value={item.hsn}
+                                                onChange={(e) => updateItemCalculations(index, 'hsn', e.target.value)}
+                                                size="small"
+                                                sx={{ width: 100 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                value={item.lead_time}
+                                                onChange={(e) => updateItemCalculations(index, 'lead_time', e.target.value)}
+                                                size="small"
+                                                sx={{ width: 100 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                value={item.brand}
+                                                size="small"
+                                                disabled
+                                                sx={{ width: 100 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <IconButton
+                                                color="error"
+                                                onClick={() => removeQuotationItem(index)}
+                                            >
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                    {/* Price and amount details row */}
+                                    <TableRow sx={{ backgroundColor: '#fafafa' }}>
+                                        <TableCell />
+                                        <TableCell colSpan={8}>
+                                            <Box sx={{ display: 'flex', gap: 2, pl: 2 }}>
+                                                <Box>
+                                                    <Typography variant="subtitle2" gutterBottom>Price Details</Typography>
+                                                    <Box sx={{ display: 'flex', gap: 2 }}>
+                                                        <TextField
+                                                            label="Unit Rate"
+                                                            type="number"
+                                                            value={item.unit_rate}
+                                                            onChange={(e) => updateItemCalculations(index, 'unit_rate', Number(e.target.value))}
+                                                            size="small"
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                        <TextField
+                                                            label="Discount %"
+                                                            type="number"
+                                                            value={item.discount_percentage}
+                                                            onChange={(e) => updateItemCalculations(index, 'discount_percentage', Number(e.target.value))}
+                                                            size="small"
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                        <TextField
+                                                            label="Discount Rate"
+                                                            value={item.discount_rate.toFixed(2)}
+                                                            size="small"
+                                                            disabled
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="subtitle2" gutterBottom>Amount Details</Typography>
+                                                    <Box sx={{ display: 'flex', gap: 2 }}>
+                                                        <TextField
+                                                            label="Expanded Rate"
+                                                            value={item.expanded_rate.toFixed(2)}
+                                                            size="small"
+                                                            disabled
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                        <TextField
+                                                            label="GST %"
+                                                            value={item.gst_percentage}
+                                                            size="small"
+                                                            disabled
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                        <TextField
+                                                            label="GST Value"
+                                                            value={item.gst_value.toFixed(2)}
+                                                            size="small"
+                                                            disabled
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                        <TextField
+                                                            label="Total"
+                                                            value={item.total.toFixed(2)}
+                                                            size="small"
+                                                            disabled
+                                                            sx={{ width: 120 }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                </React.Fragment>
                             ))}
                         </TableBody>
                     </Table>
