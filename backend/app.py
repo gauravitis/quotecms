@@ -345,7 +345,7 @@ def generate_quote(quotation_id):
         company_cell = header_table.rows[0].cells[0]
         company_name = company_cell.paragraphs[0]
         company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        company_name.add_run(company_data['name'].upper() + " PVT. LTD.")
+        company_name.add_run(company_data['name'].upper())
         company_name.runs[0].font.size = Pt(16)
         company_name.runs[0].font.bold = True
         company_name.runs[0].font.color.rgb = RGBColor(255, 255, 255)
@@ -675,7 +675,7 @@ def generate_quote(quotation_id):
         
         # Add "For COMPANY NAME" text
         company_name = data.get('company', {}).get('name', '').upper()
-        for_company = signature_section.add_run(f"For {company_name} PVT. LTD.")
+        for_company = signature_section.add_run(f"For {company_name}")
         for_company.font.size = Pt(11)
         signature_section.add_run('\n\n')  # Add some space
         
@@ -1005,8 +1005,8 @@ def generate_quotation():
         company_cell = header_table.rows[0].cells[0]
         company_name = company_cell.paragraphs[0]
         company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        company_name.add_run(data.get('company', {}).get('name', '').upper() + " PVT. LTD.")
-        company_name.runs[0].font.size = Pt(14)  # Slightly reduced from 16
+        company_name.add_run(data.get('company', {}).get('name', '').upper())
+        company_name.runs[0].font.size = Pt(16)
         company_name.runs[0].font.bold = True
         company_name.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
@@ -1339,7 +1339,7 @@ def generate_quotation():
         
         # Add "For COMPANY NAME" text
         company_name = data.get('company', {}).get('name', '').upper()
-        for_company = signature_section.add_run(f"For {company_name} PVT. LTD.")
+        for_company = signature_section.add_run(f"For {company_name}")
         for_company.font.size = Pt(11)
         signature_section.add_run('\n\n')  # Add some space
         
