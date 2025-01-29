@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Container,
@@ -17,8 +18,10 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 export default function Quotations() {
+    const navigate = useNavigate();
     const [quotations, setQuotations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -76,17 +79,37 @@ export default function Quotations() {
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc', py: 6 }}>
             <Container maxWidth="xl">
-                <Typography
-                    variant="h4"
-                    component="h1"
-                    sx={{
-                        fontWeight: 700,
-                        color: 'primary.main',
-                        mb: 4
+                {/* Header with Back Button */}
+                <Box 
+                    sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        mb: 4,
+                        gap: 2
                     }}
                 >
-                    Quotations
-                </Typography>
+                    <IconButton
+                        onClick={() => navigate('/dashboard')}
+                        sx={{
+                            bgcolor: 'rgba(25, 118, 210, 0.08)',
+                            '&:hover': {
+                                bgcolor: 'rgba(25, 118, 210, 0.16)',
+                            }
+                        }}
+                    >
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography
+                        variant="h4"
+                        component="h1"
+                        sx={{
+                            fontWeight: 700,
+                            color: 'primary.main',
+                        }}
+                    >
+                        Quotations
+                    </Typography>
+                </Box>
 
                 <TableContainer component={Paper} sx={{ mt: 2 }}>
                     <Table>
