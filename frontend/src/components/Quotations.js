@@ -43,6 +43,27 @@ export default function Quotations() {
         }
     };
 
+    const handleDelete = async (quotationId) => {
+        if (window.confirm('Are you sure you want to delete this quotation?')) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/quotations/${quotationId}`, {
+                    method: 'DELETE',
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Remove the deleted quotation from the state
+                    setQuotations(quotations.filter(q => q.id !== quotationId));
+                } else {
+                    throw new Error(data.error || 'Failed to delete quotation');
+                }
+            } catch (error) {
+                console.error('Error deleting quotation:', error);
+                setError('Failed to delete quotation');
+            }
+        }
+    };
+
     const handleDownload = async (quotationId, fileName) => {
         try {
             const response = await fetch(`http://localhost:5000/api/download-quotation/${fileName}`);
@@ -118,7 +139,6 @@ export default function Quotations() {
                                 <TableCell>Reference Number</TableCell>
                                 <TableCell>Company</TableCell>
                                 <TableCell>Client</TableCell>
-                                <TableCell>Created By</TableCell>
                                 <TableCell>Created Date</TableCell>
                                 <TableCell align="center">Actions</TableCell>
                             </TableRow>
@@ -126,17 +146,20 @@ export default function Quotations() {
                         <TableBody>
                             {quotations.map((quotation) => (
                                 <TableRow key={quotation.id}>
-                                    <TableCell>{quotation.reference_number}</TableCell>
-                                    <TableCell>{quotation.company_name}</TableCell>
-                                    <TableCell>{quotation.client_name}</TableCell>
-                                    <TableCell>{quotation.created_by}</TableCell>
+                                    <TableCell>{quotation.ref_number}</TableCell>
+                                    <TableCell>{quotation.company}</TableCell>
+                                    <TableCell>{quotation.client}</TableCell>
                                     <TableCell>
-                                        {new Date(quotation.created_at).toLocaleDateString()}
+                                        {quotation.date ? new Date(quotation.date).toLocaleDateString('en-GB', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric'
+                                        }) : 'N/A'}
                                     </TableCell>
                                     <TableCell align="center">
                                         <Tooltip title="Download">
                                             <IconButton
-                                                onClick={() => handleDownload(quotation.id, quotation.file_name)}
+                                                onClick={() => handleDownload(quotation.id, `quotation_${quotation.ref_number.replace('/', '_')}.docx`)}
                                                 color="primary"
                                                 size="small"
                                             >
@@ -153,6 +176,7 @@ export default function Quotations() {
                                         </Tooltip>
                                         <Tooltip title="Delete">
                                             <IconButton
+                                                onClick={() => handleDelete(quotation.id)}
                                                 color="error"
                                                 size="small"
                                             >

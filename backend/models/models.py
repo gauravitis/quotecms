@@ -61,6 +61,8 @@ class Quotation:
             'id': data.get('id'),
             'company_id': data.get('company_id'),
             'client_id': data.get('client_id'),
+            'employee_id': data.get('employee_id'),
+            'created_by': data.get('created_by'),  # Employee name
             'ref_number': data.get('ref_number'),
             'date': data.get('date'),
             'items': data.get('items', []),

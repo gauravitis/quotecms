@@ -15,6 +15,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 import base64
 import requests
+from collections import OrderedDict
 
 # Load environment variables
 load_dotenv()
@@ -272,14 +273,57 @@ def delete_employee(employee_id):
 @app.route('/api/quotations', methods=['GET'])
 def get_quotations():
     try:
-        # Use Supabase instead of SQLAlchemy
-        quotations = supabase.table('quotations').select('*').execute()
+        # Get quotations with company and client information only
+        quotations = supabase.table('quotations') \
+            .select('id, ref_number, date, total, companies(name), clients(name)') \
+            .execute()
+
+        # Process the results
+        processed_quotations = []
+        for quotation in quotations.data:
+            company_name = quotation['companies']['name'] if quotation.get('companies') else None
+            client_name = quotation['clients']['name'] if quotation.get('clients') else None
+            
+            processed_quotation = {
+                'id': quotation['id'],
+                'ref_number': quotation['ref_number'],
+                'company': company_name,
+                'client': client_name,
+                'date': quotation['date'],
+                'total': float(quotation['total']) if quotation.get('total') else 0
+            }
+            
+            processed_quotations.append(processed_quotation)
+
         return jsonify({
-            'success': True,
-            'data': [Quotation.from_db(q) for q in quotations.data]
+            "success": True,
+            "data": processed_quotations
         })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"Error in get_quotations: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/quotations/<int:quotation_id>', methods=['DELETE'])
+def delete_quotation(quotation_id):
+    try:
+        # Delete the quotation
+        result = supabase.table('quotations').delete().eq('id', quotation_id).execute()
+        
+        if not result.data:
+            return jsonify({
+                'success': False,
+                'error': 'Quotation not found'
+            }), 404
+            
+        return jsonify({
+            'success': True,
+            'message': 'Quotation deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/quotations', methods=['POST'])
 def create_quotation():
@@ -999,7 +1043,49 @@ def generate_quotation():
     try:
         data = request.json
         
-        # Create a new Word document
+        # First, save the quotation to the database
+        company_id = data.get('company', {}).get('id')
+        client_id = data.get('client', {}).get('id')
+        employee_id = data.get('employee', {}).get('id')  # Get employee ID
+        
+        # Generate reference number
+        company_response = supabase.table('companies').select('*').eq('id', company_id).execute()
+        if not company_response.data:
+            return jsonify({"success": False, "error": "Company not found"}), 404
+            
+        company = company_response.data[0]
+        new_number = company.get('last_quote_number', 0) + 1
+        ref_number = company.get('ref_format', 'QUOTE-{YYYY}-{NUM}').format(
+            YYYY=datetime.now().year,
+            NUM=str(new_number).zfill(4)
+        )
+        
+        # Prepare quotation data
+        quotation_data = {
+            'company_id': company_id,
+            'client_id': client_id,
+            'employee_id': employee_id,  # Add employee ID
+            'ref_number': ref_number,
+            'date': datetime.utcnow().isoformat(),
+            'items': data.get('items', []),
+            'total': data.get('grandTotal', 0)
+        }
+        
+        # Create quotation in database
+        quotation_response = supabase.table('quotations').insert(quotation_data).execute()
+        
+        if not quotation_response.data:
+            raise Exception("Failed to create quotation")
+            
+        # Update company's last quote number
+        company_update = supabase.table('companies').update({
+            'last_quote_number': new_number
+        }).eq('id', company_id).execute()
+        
+        if not company_update.data:
+            print("Warning: Failed to update company's last quote number")
+        
+        # Now proceed with document generation
         doc = Document()
         
         # Set very narrow margins
