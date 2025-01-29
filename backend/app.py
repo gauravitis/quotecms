@@ -22,9 +22,12 @@ load_dotenv()
 app = Flask(__name__)
 # Enable CORS for all routes during development
 CORS(app, 
-     resources={r"/api/*": {"origins": ["http://localhost:3000"], "supports_credentials": True}},
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     resources={r"/api/*": {
+         "origins": ["http://localhost:3000"],
+         "supports_credentials": True,
+         "allow_headers": ["Content-Type", "Authorization"],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+     }})
 
 # Configure Flask app
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
@@ -188,6 +191,20 @@ def create_client():
             "success": True,
             "data": Client.from_db(client.data[0])
         }), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/clients/<int:client_id>', methods=['PUT'])
+def update_client(client_id):
+    try:
+        data = request.json
+        client = supabase.table('clients').update(data).eq('id', client_id).execute()
+        if not client.data:
+            return jsonify({"success": False, "error": "Client not found"}), 404
+        return jsonify({
+            "success": True,
+            "data": Client.from_db(client.data[0])
+        })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -655,11 +672,11 @@ def generate_quote(quotation_id):
         employee_details.style = doc.styles['Normal']
         employee_details.paragraph_format.space_before = Pt(6)
         employee_name = data.get('employee', {}).get('name', '')
-        employee_mobile = data.get('employee', {}).get('mobile', '')
+        employee_phone = data.get('employee', {}).get('phone_number', '')  # Changed from mobile to phone_number
         employee_email = data.get('employee', {}).get('email', '')
         
         employee_details.add_run(f"{employee_name}\n").font.size = Pt(8)
-        employee_details.add_run(f"Mobile: {employee_mobile}\n").font.size = Pt(8)
+        employee_details.add_run(f"Mobile: {employee_phone}\n").font.size = Pt(8)  # Using the new employee_phone variable
         email_run = employee_details.add_run(f"Email: ")
         email_run.font.size = Pt(8)
         email_link = employee_details.add_run(employee_email)
@@ -1319,11 +1336,11 @@ def generate_quotation():
         employee_details.style = doc.styles['Normal']
         employee_details.paragraph_format.space_before = Pt(6)
         employee_name = data.get('employee', {}).get('name', '')
-        employee_mobile = data.get('employee', {}).get('mobile', '')
+        employee_phone = data.get('employee', {}).get('phone_number', '')  # Changed from mobile to phone_number
         employee_email = data.get('employee', {}).get('email', '')
         
         employee_details.add_run(f"{employee_name}\n").font.size = Pt(8)
-        employee_details.add_run(f"Mobile: {employee_mobile}\n").font.size = Pt(8)
+        employee_details.add_run(f"Mobile: {employee_phone}\n").font.size = Pt(8)  # Using the new employee_phone variable
         email_run = employee_details.add_run(f"Email: ")
         email_run.font.size = Pt(8)
         email_link = employee_details.add_run(employee_email)
