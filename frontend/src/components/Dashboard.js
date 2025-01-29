@@ -163,6 +163,45 @@ export default function Dashboard() {
         fetchStats();
     }, []);
 
+    const dashboardItems = [
+        {
+            title: 'Companies',
+            icon: <BusinessIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'Manage your company profiles and settings',
+            onClick: () => navigate('/companies')
+        },
+        {
+            title: 'Employees',
+            icon: <PeopleIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'Manage employee information and roles',
+            onClick: () => navigate('/employees')
+        },
+        {
+            title: 'Clients',
+            icon: <GroupIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'View and manage your client database',
+            onClick: () => navigate('/clients')
+        },
+        {
+            title: 'Items',
+            icon: <InventoryIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'Manage your product catalog and pricing',
+            onClick: () => navigate('/items')
+        },
+        {
+            title: 'Generate Quotation',
+            icon: <DescriptionIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'Create new quotations for clients',
+            onClick: () => navigate('/generate-quotation')
+        },
+        {
+            title: 'Quotations',
+            icon: <ReceiptIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+            description: 'View and manage all created quotations',
+            onClick: () => navigate('/quotations')
+        }
+    ];
+
     return (
         <Box 
             sx={{ 
@@ -248,71 +287,12 @@ export default function Dashboard() {
                 </Grid>
 
                 {/* Dashboard Cards */}
-                <Grid 
-                    container 
-                    spacing={4} 
-                    sx={{ 
-                        mt: 2,
-                        mb: 4,
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        justifyContent: 'flex-start'
-                    }}
-                >
-                    {/* Top Row */}
-                    <Grid item xs={12} sm={6} lg={4}>
-                        <DashboardCard
-                            title="Companies"
-                            icon={<BusinessIcon sx={{ fontSize: 56, color: '#1976d2' }} />}
-                            description="Manage and view all company profiles, details, and related information"
-                            onClick={() => navigate('/companies')}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} lg={4}>
-                        <DashboardCard
-                            title="Employees"
-                            icon={<PeopleIcon sx={{ fontSize: 56, color: '#2e7d32' }} />}
-                            description="Access and manage employee records, roles, and contact details"
-                            onClick={() => navigate('/employees')}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} lg={4}>
-                        <DashboardCard
-                            title="Clients"
-                            icon={<GroupIcon sx={{ fontSize: 56, color: '#ed6c02' }} />}
-                            description="View and manage client database, contacts, and interactions"
-                            onClick={() => navigate('/clients')}
-                        />
-                    </Grid>
-
-                    {/* Bottom Row */}
-                    <Grid 
-                        container 
-                        item 
-                        xs={12} 
-                        spacing={4}
-                        sx={{
-                            mt: { xs: 4, sm: 8 },  // Added more margin top
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Grid item xs={12} sm={6} lg={4}>
-                            <DashboardCard
-                                title="Items"
-                                icon={<InventoryIcon sx={{ fontSize: 56, color: '#9c27b0' }} />}
-                                description="Browse and manage your product catalogue and inventory items"
-                                onClick={() => navigate('/items')}
-                            />
+                <Grid container spacing={3}>
+                    {dashboardItems.map((item, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                            <DashboardCard {...item} />
                         </Grid>
-                        <Grid item xs={12} sm={6} lg={4}>
-                            <DashboardCard
-                                title="Quotations"
-                                icon={<DescriptionIcon sx={{ fontSize: 56, color: '#d32f2f' }} />}
-                                description="Generate, track, and manage all your business quotations"
-                                onClick={() => navigate('/quotations')}
-                            />
-                        </Grid>
-                    </Grid>
+                    ))}
                 </Grid>
             </Container>
         </Box>

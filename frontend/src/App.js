@@ -7,6 +7,7 @@ import Companies from './components/Companies';
 import Employees from './components/Employees';
 import Clients from './components/Clients';
 import Items from './components/Items';
+import Quotations from './components/Quotations';
 import { ThemeProvider, createTheme } from '@mui/material';
 
 // Create a custom theme
@@ -63,7 +64,8 @@ function App() {
           <Route path="/employees" element={<Employees />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/items" element={<Items />} />
-          <Route path="/quotations" element={<QuotationForm />} />
+          <Route path="/generate-quotation" element={<QuotationForm />} />
+          <Route path="/quotations" element={<Quotations />} />
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
