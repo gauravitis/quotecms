@@ -217,7 +217,10 @@ export default function QuotationForm() {
 
             // Prepare data for the quotation
             const quotationData = {
-                company: selectedCompany,
+                company: {
+                    ...selectedCompany,
+                    seal_image_url: selectedCompany?.seal_image_url || ''  // Ensure seal_image_url is included
+                },
                 employee: selectedEmployee,
                 client: selectedClient,
                 refNumber,

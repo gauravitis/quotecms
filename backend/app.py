@@ -13,6 +13,8 @@ from io import BytesIO
 from werkzeug.utils import secure_filename
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
+import base64
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -343,36 +345,34 @@ def generate_quote(quotation_id):
         company_cell = header_table.rows[0].cells[0]
         company_name = company_cell.paragraphs[0]
         company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        company_run = company_name.add_run(company_data['name'].upper() + " PVT. LTD.")
-        company_run.font.size = Pt(16)
-        company_run.font.bold = True
-        company_run.font.color.rgb = RGBColor(255, 255, 255)
+        company_name.add_run(company_data['name'].upper() + " PVT. LTD.")
+        company_name.runs[0].font.size = Pt(16)
+        company_name.runs[0].font.bold = True
+        company_name.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Address Cell
         address_cell = header_table.rows[1].cells[0]
         address = address_cell.paragraphs[0]
         address.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        address_run = address.add_run(company_data['address'].upper())
-        address_run.font.size = Pt(11)
-        address_run.font.color.rgb = RGBColor(255, 255, 255)
+        address.add_run(company_data['address'].upper())
+        address.runs[0].font.size = Pt(11)
+        address.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Email and Phone Cell
         email_cell = header_table.rows[2].cells[0]
         email = email_cell.paragraphs[0]
         email.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        email_text = f"Email:- {company_data['email']} {company_data['phone']}"
-        email_run = email.add_run(email_text)
-        email_run.font.size = Pt(11)
-        email_run.font.color.rgb = RGBColor(255, 255, 255)
+        email.add_run(f"Email:- {company_data['email']} {company_data['phone']}")
+        email.runs[0].font.size = Pt(11)
+        email.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Tax Info Cell
         tax_cell = header_table.rows[3].cells[0]
         tax_info = tax_cell.paragraphs[0]
         tax_info.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        tax_text = f"PAN NO.: {company_data['pan']} | GST NO.: {company_data['gst']}"
-        tax_run = tax_info.add_run(tax_text)
-        tax_run.font.size = Pt(11)
-        tax_run.font.color.rgb = RGBColor(255, 255, 255)
+        tax_info.add_run(f"PAN NO.: {company_data['pan']} | GST NO.: {company_data['gst']}")
+        tax_info.runs[0].font.size = Pt(11)
+        tax_info.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Set background color for all cells and remove borders
         for row in header_table.rows:
@@ -392,9 +392,9 @@ def generate_quote(quotation_id):
         # Add QUOTATION/PERFORMA INVOICE title
         title = doc.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title_run = title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
-        title_run.font.bold = True
-        title_run.font.size = Pt(12)
+        title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title.runs[0].font.bold = True
+        title.runs[0].font.size = Pt(12)
 
         # Add reference number and date
         ref_date = doc.add_table(rows=1, cols=2)
@@ -419,10 +419,10 @@ def generate_quote(quotation_id):
         # To Cell with blue background
         to_cell = to_table.rows[0].cells[0]
         to_paragraph = to_cell.paragraphs[0]
-        to_run = to_paragraph.add_run('To')
-        to_run.font.bold = True
-        to_run.font.size = Pt(9)
-        to_run.font.color.rgb = RGBColor(255, 255, 255)
+        to_paragraph.add_run('To')
+        to_paragraph.runs[0].font.bold = True
+        to_paragraph.runs[0].font.size = Pt(9)
+        to_paragraph.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Set blue background for To cell
         shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -585,11 +585,125 @@ def generate_quote(quotation_id):
             term_text = terms_list.add_run(f"{idx}) {term}\n")
             term_text.font.size = Pt(8)
         
-        # Add signature
+        # Add spacing
         doc.add_paragraph('\n')
-        signature = doc.add_paragraph()
-        signature.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        signature.add_run('Authorized Signatory')
+        
+        # Add Bank Details section
+        bank_table = doc.add_table(rows=1, cols=1)
+        bank_table.style = 'Table Grid'
+        
+        # Bank Details header cell with blue background
+        bank_header_cell = bank_table.rows[0].cells[0]
+        bank_header_paragraph = bank_header_cell.paragraphs[0]
+        bank_header_run = bank_header_paragraph.add_run('Bank Details')
+        bank_header_run.font.bold = True
+        bank_header_run.font.color.rgb = RGBColor(255, 255, 255)
+        bank_header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        bank_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        bank_header_cell._tc.get_or_add_tcPr().append(bank_shading_elm)
+        
+        # Remove borders from the header cell
+        bank_tcPr = bank_header_cell._tc.get_or_add_tcPr()
+        bank_tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        bank_tcPr.append(bank_tcBorders)
+        
+        # Add bank details content
+        bank_details = doc.add_paragraph()
+        bank_details.style = doc.styles['Normal']
+        bank_details.paragraph_format.space_before = Pt(6)
+        bank_details_text = bank_details.add_run(f"HDFC BANK LTD. Account No: {data.get('company', {}).get('account_number', '')} ; NEFT/RTGS IFCS : {data.get('company', {}).get('ifsc_code', '')} Branch code:{data.get('company', {}).get('branch_code', '')} ; Micro code : {data.get('company', {}).get('micro_code', '')} ;Account type: Current account")
+        bank_details_text.font.size = Pt(8)
+        
+        # Add spacing before quotation created by section
+        doc.add_paragraph('\n')
+        
+        # Add Quotation Created By section
+        created_by_table = doc.add_table(rows=1, cols=1)
+        created_by_table.style = 'Table Grid'
+        
+        # Created By header cell with blue background
+        created_by_header_cell = created_by_table.rows[0].cells[0]
+        created_by_header_paragraph = created_by_header_cell.paragraphs[0]
+        created_by_header_run = created_by_header_paragraph.add_run('Quotation Created By')
+        created_by_header_run.font.bold = True
+        created_by_header_run.font.color.rgb = RGBColor(255, 255, 255)
+        created_by_header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        created_by_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        created_by_header_cell._tc.get_or_add_tcPr().append(created_by_shading_elm)
+        
+        # Remove borders from the header cell
+        created_by_tcPr = created_by_header_cell._tc.get_or_add_tcPr()
+        created_by_tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        created_by_tcPr.append(created_by_tcBorders)
+        
+        # Add employee details content
+        employee_details = doc.add_paragraph()
+        employee_details.style = doc.styles['Normal']
+        employee_details.paragraph_format.space_before = Pt(6)
+        employee_name = data.get('employee', {}).get('name', '')
+        employee_mobile = data.get('employee', {}).get('mobile', '')
+        employee_email = data.get('employee', {}).get('email', '')
+        
+        employee_details.add_run(f"{employee_name}\n").font.size = Pt(8)
+        employee_details.add_run(f"Mobile: {employee_mobile}\n").font.size = Pt(8)
+        email_run = employee_details.add_run(f"Email: ")
+        email_run.font.size = Pt(8)
+        email_link = employee_details.add_run(employee_email)
+        email_link.font.size = Pt(8)
+        email_link.font.color.rgb = RGBColor(0, 0, 255)  # Blue color for email
+        
+        # Add spacing before signature
+        doc.add_paragraph('\n')
+        
+        # Add signature section at the bottom
+        signature_section = doc.add_paragraph()
+        signature_section.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Add "For COMPANY NAME" text
+        company_name = data.get('company', {}).get('name', '').upper()
+        for_company = signature_section.add_run(f"For {company_name} PVT. LTD.")
+        for_company.font.size = Pt(11)
+        signature_section.add_run('\n\n')  # Add some space
+        
+        # Add company seal image if available
+        company_seal = data.get('company', {}).get('seal_image_url', '')  # Changed from 'seal_image' to 'seal_image_url'
+        print("Company Seal Data:", company_seal)  # Debug print
+        if company_seal:
+            try:
+                # Get the full path to the image
+                seal_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), company_seal.lstrip('/'))
+                
+                if os.path.exists(seal_path):
+                    # Add the image to the document with specific size
+                    signature_section.add_run().add_picture(seal_path, width=Inches(1.1), height=Inches(1.1))  # Slightly larger than 80px
+                    signature_section.add_run('\n')  # Add space after seal
+                else:
+                    print(f"Seal image file not found at path: {seal_path}")
+            except Exception as e:
+                print(f"Error adding company seal: {str(e)}")
+                import traceback
+                print(traceback.format_exc())  # Print full error traceback
+        else:
+            print("No company seal image found in data")  # Debug print
+        
+        # Add Authorized Signatory text
+        signature_section.add_run('\n')  # Add extra space before text
+        auth_signatory = signature_section.add_run("Authorized Signatory")
+        auth_signatory.font.size = Pt(11)
         
         # Save the document
         filename = f"quote_{quotation_data['ref_number']}.docx"
@@ -891,27 +1005,26 @@ def generate_quotation():
         company_cell = header_table.rows[0].cells[0]
         company_name = company_cell.paragraphs[0]
         company_name.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        company_run = company_name.add_run(data.get('company', {}).get('name', '').upper() + " PVT. LTD.")
-        company_run.font.size = Pt(14)  # Slightly reduced from 16
-        company_run.font.bold = True
-        company_run.font.color.rgb = RGBColor(255, 255, 255)
+        company_name.add_run(data.get('company', {}).get('name', '').upper() + " PVT. LTD.")
+        company_name.runs[0].font.size = Pt(14)  # Slightly reduced from 16
+        company_name.runs[0].font.bold = True
+        company_name.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Address Cell
         address_cell = header_table.rows[1].cells[0]
         address = address_cell.paragraphs[0]
         address.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        address_run = address.add_run(data.get('company', {}).get('address', '').upper())
-        address_run.font.size = Pt(11)
-        address_run.font.color.rgb = RGBColor(255, 255, 255)
+        address.add_run(data.get('company', {}).get('address', '').upper())
+        address.runs[0].font.size = Pt(11)
+        address.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Email and Phone Cell
         email_cell = header_table.rows[2].cells[0]
         email = email_cell.paragraphs[0]
         email.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        email_text = f"Email:- {data.get('company', {}).get('email', '')} {data.get('company', {}).get('phone', '')}"
-        email_run = email.add_run(email_text)
-        email_run.font.size = Pt(11)
-        email_run.font.color.rgb = RGBColor(255, 255, 255)
+        email.add_run(f"Email:- {data.get('company', {}).get('email', '')} {data.get('company', {}).get('phone', '')}")
+        email.runs[0].font.size = Pt(11)
+        email.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Tax Info Cell
         tax_cell = header_table.rows[3].cells[0]
@@ -920,9 +1033,9 @@ def generate_quotation():
         pan = data.get('company', {}).get('pan_number', '')  # Changed from 'pan' to 'pan_number'
         gst = data.get('company', {}).get('gst_number', '')  # Changed from 'gst' to 'gst_number'
         tax_text = f"PAN NO.: {pan} | GST NO.: {gst}"
-        tax_run = tax_info.add_run(tax_text)
-        tax_run.font.size = Pt(11)
-        tax_run.font.color.rgb = RGBColor(255, 255, 255)
+        tax_info.add_run(tax_text)
+        tax_info.runs[0].font.size = Pt(11)
+        tax_info.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Set background color for all cells and remove borders
         for row in header_table.rows:
@@ -942,9 +1055,9 @@ def generate_quotation():
         # Add QUOTATION/PERFORMA INVOICE title
         title = doc.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title_run = title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
-        title_run.font.bold = True
-        title_run.font.size = Pt(12)
+        title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title.runs[0].font.bold = True
+        title.runs[0].font.size = Pt(12)
 
         # Add reference number and date
         ref_date = doc.add_table(rows=1, cols=2)
@@ -969,10 +1082,10 @@ def generate_quotation():
         # To Cell with blue background
         to_cell = to_table.rows[0].cells[0]
         to_paragraph = to_cell.paragraphs[0]
-        to_run = to_paragraph.add_run('To')
-        to_run.font.bold = True
-        to_run.font.size = Pt(9)
-        to_run.font.color.rgb = RGBColor(255, 255, 255)
+        to_paragraph.add_run('To')
+        to_paragraph.runs[0].font.bold = True
+        to_paragraph.runs[0].font.size = Pt(9)
+        to_paragraph.runs[0].font.color.rgb = RGBColor(255, 255, 255)
         
         # Set blue background for To cell
         shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -1136,11 +1249,125 @@ def generate_quotation():
             term_text = terms_list.add_run(f"{idx}) {term}\n")
             term_text.font.size = Pt(8)
         
-        # Add signature
+        # Add spacing
         doc.add_paragraph('\n')
-        signature = doc.add_paragraph()
-        signature.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        signature.add_run('Authorized Signatory')
+        
+        # Add Bank Details section
+        bank_table = doc.add_table(rows=1, cols=1)
+        bank_table.style = 'Table Grid'
+        
+        # Bank Details header cell with blue background
+        bank_header_cell = bank_table.rows[0].cells[0]
+        bank_header_paragraph = bank_header_cell.paragraphs[0]
+        bank_header_run = bank_header_paragraph.add_run('Bank Details')
+        bank_header_run.font.bold = True
+        bank_header_run.font.color.rgb = RGBColor(255, 255, 255)
+        bank_header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        bank_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        bank_header_cell._tc.get_or_add_tcPr().append(bank_shading_elm)
+        
+        # Remove borders from the header cell
+        bank_tcPr = bank_header_cell._tc.get_or_add_tcPr()
+        bank_tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        bank_tcPr.append(bank_tcBorders)
+        
+        # Add bank details content
+        bank_details = doc.add_paragraph()
+        bank_details.style = doc.styles['Normal']
+        bank_details.paragraph_format.space_before = Pt(6)
+        bank_details_text = bank_details.add_run(f"HDFC BANK LTD. Account No: {data.get('company', {}).get('account_number', '')} ; NEFT/RTGS IFCS : {data.get('company', {}).get('ifsc_code', '')} Branch code:{data.get('company', {}).get('branch_code', '')} ; Micro code : {data.get('company', {}).get('micro_code', '')} ;Account type: Current account")
+        bank_details_text.font.size = Pt(8)
+        
+        # Add spacing before quotation created by section
+        doc.add_paragraph('\n')
+        
+        # Add Quotation Created By section
+        created_by_table = doc.add_table(rows=1, cols=1)
+        created_by_table.style = 'Table Grid'
+        
+        # Created By header cell with blue background
+        created_by_header_cell = created_by_table.rows[0].cells[0]
+        created_by_header_paragraph = created_by_header_cell.paragraphs[0]
+        created_by_header_run = created_by_header_paragraph.add_run('Quotation Created By')
+        created_by_header_run.font.bold = True
+        created_by_header_run.font.color.rgb = RGBColor(255, 255, 255)
+        created_by_header_run.font.size = Pt(11)
+        
+        # Set blue background for header cell
+        created_by_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+        created_by_header_cell._tc.get_or_add_tcPr().append(created_by_shading_elm)
+        
+        # Remove borders from the header cell
+        created_by_tcPr = created_by_header_cell._tc.get_or_add_tcPr()
+        created_by_tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                            '<w:top w:val="nil"/>' +
+                            '<w:left w:val="nil"/>' +
+                            '<w:bottom w:val="nil"/>' +
+                            '<w:right w:val="nil"/>' +
+                            '</w:tcBorders>')
+        created_by_tcPr.append(created_by_tcBorders)
+        
+        # Add employee details content
+        employee_details = doc.add_paragraph()
+        employee_details.style = doc.styles['Normal']
+        employee_details.paragraph_format.space_before = Pt(6)
+        employee_name = data.get('employee', {}).get('name', '')
+        employee_mobile = data.get('employee', {}).get('mobile', '')
+        employee_email = data.get('employee', {}).get('email', '')
+        
+        employee_details.add_run(f"{employee_name}\n").font.size = Pt(8)
+        employee_details.add_run(f"Mobile: {employee_mobile}\n").font.size = Pt(8)
+        email_run = employee_details.add_run(f"Email: ")
+        email_run.font.size = Pt(8)
+        email_link = employee_details.add_run(employee_email)
+        email_link.font.size = Pt(8)
+        email_link.font.color.rgb = RGBColor(0, 0, 255)  # Blue color for email
+        
+        # Add spacing before signature
+        doc.add_paragraph('\n')
+        
+        # Add signature section at the bottom
+        signature_section = doc.add_paragraph()
+        signature_section.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Add "For COMPANY NAME" text
+        company_name = data.get('company', {}).get('name', '').upper()
+        for_company = signature_section.add_run(f"For {company_name} PVT. LTD.")
+        for_company.font.size = Pt(11)
+        signature_section.add_run('\n\n')  # Add some space
+        
+        # Add company seal image if available
+        company_seal = data.get('company', {}).get('seal_image_url', '')  # Changed from 'seal_image' to 'seal_image_url'
+        print("Company Seal Data:", company_seal)  # Debug print
+        if company_seal:
+            try:
+                # Get the full path to the image
+                seal_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), company_seal.lstrip('/'))
+                
+                if os.path.exists(seal_path):
+                    # Add the image to the document with specific size
+                    signature_section.add_run().add_picture(seal_path, width=Inches(1.1), height=Inches(1.1))  # Slightly larger than 80px
+                    signature_section.add_run('\n')  # Add space after seal
+                else:
+                    print(f"Seal image file not found at path: {seal_path}")
+            except Exception as e:
+                print(f"Error adding company seal: {str(e)}")
+                import traceback
+                print(traceback.format_exc())  # Print full error traceback
+        else:
+            print("No company seal image found in data")  # Debug print
+        
+        # Add Authorized Signatory text
+        signature_section.add_run('\n')  # Add extra space before text
+        auth_signatory = signature_section.add_run("Authorized Signatory")
+        auth_signatory.font.size = Pt(11)
         
         # Save the document
         filename = f"quotation_{data.get('refNumber', 'temp').replace('/', '_')}.docx"
