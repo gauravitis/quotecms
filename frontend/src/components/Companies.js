@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Container,
@@ -29,14 +29,14 @@ import {
     ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { companiesApi } from '../services/api';
 
 const BACKEND_URL = 'http://localhost:5000';
 
 export default function Companies() {
     const navigate = useNavigate();
-    const [companies, setCompanies] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const queryClient = useQueryClient();
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedCompany, setSelectedCompany] = useState(null);
     const [formData, setFormData] = useState({
@@ -54,26 +54,33 @@ export default function Companies() {
         phone: '',
     });
 
-    useEffect(() => {
-        fetchCompanies();
-    }, []);
+    // Queries
+    const { data: companies = [], isLoading: loading, error } = useQuery({
+        queryKey: ['companies'],
+        queryFn: companiesApi.getAll,
+    });
 
-    const fetchCompanies = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('http://localhost:5000/api/companies');
-            const data = await response.json();
-            if (data.success) {
-                setCompanies(data.data);
-            } else {
-                throw new Error(data.error || 'Failed to fetch companies');
-            }
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Mutations
+    const createCompany = useMutation({
+        mutationFn: companiesApi.create,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+        },
+    });
+
+    const updateCompanyMutation = useMutation({
+        mutationFn: ({ id, data }) => companiesApi.update(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+        },
+    });
+
+    const deleteCompanyMutation = useMutation({
+        mutationFn: companiesApi.delete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['companies'] });
+        },
+    });
 
     const handleOpenDialog = (company = null) => {
         if (company) {
@@ -133,48 +140,20 @@ export default function Companies() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const url = selectedCompany
-                ? `http://localhost:5000/api/companies/${selectedCompany.id}`
-                : 'http://localhost:5000/api/companies';
-            
-            const method = selectedCompany ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
+        if (selectedCompany) {
+            await updateCompanyMutation.mutateAsync({ 
+                id: selectedCompany.id, 
+                data: formData 
             });
-
-            const data = await response.json();
-            if (data.success) {
-                fetchCompanies();
-                handleCloseDialog();
-            } else {
-                throw new Error(data.error || 'Failed to save company');
-            }
-        } catch (err) {
-            setError(err.message);
+        } else {
+            await createCompany.mutateAsync(formData);
         }
+        handleCloseDialog();
     };
 
     const handleDelete = async (companyId) => {
         if (window.confirm('Are you sure you want to delete this company?')) {
-            try {
-                const response = await fetch(`http://localhost:5000/api/companies/${companyId}`, {
-                    method: 'DELETE',
-                });
-                const data = await response.json();
-                if (data.success) {
-                    fetchCompanies();
-                } else {
-                    throw new Error(data.error || 'Failed to delete company');
-                }
-            } catch (err) {
-                setError(err.message);
-            }
+            await deleteCompanyMutation.mutateAsync(companyId);
         }
     };
 
@@ -192,12 +171,12 @@ export default function Companies() {
             });
             const data = await response.json();
             if (data.success) {
-                fetchCompanies();
+                queryClient.invalidateQueries({ queryKey: ['companies'] });
             } else {
                 throw new Error(data.error || 'Failed to upload seal image');
             }
         } catch (err) {
-            setError(err.message);
+            console.error(err.message);
         }
     };
 
