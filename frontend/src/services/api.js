@@ -39,21 +39,63 @@ export const companiesApi = {
 };
 
 // Quotations API
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Helper function to handle API responses
+const handleResponse = async (response) => {
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || 'An error occurred');
+    }
+    return data.data;
+};
+
 export const quotationsApi = {
-  getAll: () => apiRequest('/quotations'),
-  getById: (id) => apiRequest(`/quotations/${id}`),
-  create: (data) => apiRequest('/quotations', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id, data) => apiRequest(`/quotations/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
-  delete: (id) => apiRequest(`/quotations/${id}`, {
-    method: 'DELETE',
-  }),
-  download: (fileName) => fetch(`${API_URL}/download-quotation/${fileName}`),
+    // Get all quotations
+    getAll: async () => {
+        const response = await fetch(`${API_BASE_URL}/quotations`);
+        return handleResponse(response);
+    },
+
+    // Get quotation by ID
+    getById: async (id) => {
+        const response = await fetch(`${API_BASE_URL}/quotations/${id}`);
+        return handleResponse(response);
+    },
+
+    // Create new quotation
+    create: async (quotationData) => {
+        const response = await fetch(`${API_BASE_URL}/quotations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(quotationData),
+        });
+        return handleResponse(response);
+    },
+
+    // Update quotation
+    update: async (id, quotationData) => {
+        const response = await fetch(`${API_BASE_URL}/quotations/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(quotationData),
+        });
+        return handleResponse(response);
+    },
+
+    // Delete quotation
+    delete: async (id) => {
+        const response = await fetch(`${API_BASE_URL}/quotations/${id}`, {
+            method: 'DELETE',
+        });
+        return handleResponse(response);
+    },
+
+    download: (fileName) => fetch(`${API_BASE_URL}/download-quotation/${fileName}`),
 };
 
 // Clients API

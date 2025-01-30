@@ -16,6 +16,7 @@ from docx.oxml.ns import nsdecls
 import base64
 import requests
 from collections import OrderedDict
+from docxtpl import DocxTemplate
 
 # Load environment variables
 load_dotenv()
@@ -348,6 +349,7 @@ def create_quotation():
         # Prepare quotation data
         quotation_data = {
             'company_id': data['company_id'],
+            'client_id': data['client_id'],
             'ref_number': ref_number,
             'date': datetime.utcnow().isoformat(),
             'items': data['items'],
@@ -1064,7 +1066,6 @@ def generate_quotation():
         quotation_data = {
             'company_id': company_id,
             'client_id': client_id,
-            'employee_id': employee_id,  # Add employee ID
             'ref_number': ref_number,
             'date': datetime.utcnow().isoformat(),
             'items': data.get('items', []),
@@ -1507,6 +1508,150 @@ def debug_config():
         "supabase_key_exists": bool(os.getenv('SUPABASE_KEY')),
         "secret_key_exists": bool(os.getenv('SECRET_KEY'))
     }), 200
+
+@app.route('/api/quotations/<int:quotation_id>', methods=['GET'])
+def get_quotation(quotation_id):
+    try:
+        print(f"Fetching quotation with ID: {quotation_id}")  # Debug log
+        
+        # First, check if quotation exists
+        quotation = supabase.table('quotations') \
+            .select('*') \
+            .eq('id', quotation_id) \
+            .execute()
+            
+        if not quotation.data:
+            return jsonify({
+                "success": False,
+                "error": "Quotation not found"
+            }), 404
+
+        quotation_data = quotation.data[0]
+        print(f"Found quotation: {quotation_data}")  # Debug log
+
+        # Fetch company details
+        company = supabase.table('companies') \
+            .select('name, gst_number') \
+            .eq('id', quotation_data['company_id']) \
+            .execute()
+            
+        print(f"Company data: {company.data}")  # Debug log
+
+        # Fetch client details
+        client = supabase.table('clients') \
+            .select('*') \
+            .eq('id', quotation_data['client_id']) \
+            .execute()
+            
+        print(f"Client data: {client.data}")  # Debug log
+
+        # Process the data
+        processed_quotation = {
+            'id': quotation_data['id'],
+            'ref_number': quotation_data['ref_number'],
+            'date': quotation_data['date'],
+            'company': company.data[0]['name'] if company.data else None,
+            'company_gst': company.data[0]['gst_number'] if company.data else None,
+            'client': client.data[0]['name'] if client.data else None,
+            'client_contact': client.data[0]['contact'] if client.data and 'contact' in client.data[0] else None,  # Using 'contact' as a fallback
+            'total_amount': float(quotation_data['total']) if quotation_data.get('total') else 0,
+            'items': []
+        }
+
+        # Process items from the quotation data itself since they're stored in JSON
+        if quotation_data.get('items'):
+            for item in quotation_data['items']:
+                processed_item = {
+                    'id': item['id'],
+                    'description': item['description'],
+                    'quantity': item['quantity'],
+                    'price': float(item['unit_rate']) if item.get('unit_rate') else 0,
+                    'gst_percentage': item['gst_percentage'],
+                    'total': float(item['total']) if item.get('total') else 0
+                }
+                processed_quotation['items'].append(processed_item)
+
+        print(f"Processed quotation: {processed_quotation}")  # Debug log
+
+        return jsonify({
+            "success": True,
+            "data": processed_quotation
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"Error in get_quotation: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")  # Print full error traceback
+        return jsonify({
+            "success": False,
+            "error": f"Failed to fetch quotation details: {str(e)}"
+        }), 500
+
+@app.route('/api/quotations/<int:quotation_id>/download', methods=['GET'])
+def download_quotation_by_id(quotation_id):
+    try:
+        # First, get the quotation details
+        quotation = supabase.table('quotations') \
+            .select('*') \
+            .eq('id', quotation_id) \
+            .execute()
+            
+        if not quotation.data:
+            return jsonify({
+                "success": False,
+                "error": "Quotation not found"
+            }), 404
+
+        quotation_data = quotation.data[0]
+        
+        # Generate the Word document
+        doc = DocxTemplate("templates/quote_template.docx")
+        
+        # Get company and client details
+        company = supabase.table('companies') \
+            .select('*') \
+            .eq('id', quotation_data['company_id']) \
+            .execute()
+            
+        client = supabase.table('clients') \
+            .select('*') \
+            .eq('id', quotation_data['client_id']) \
+            .execute()
+
+        # Prepare context for the template
+        context = {
+            'quotation_number': quotation_data['ref_number'],
+            'date': quotation_data.get('date', '').split('T')[0],
+            'company_name': company.data[0]['name'] if company.data else '',
+            'company_gst': company.data[0]['gst_number'] if company.data else '',
+            'client_name': client.data[0]['name'] if client.data else '',
+            'items': quotation_data.get('items', []),
+            'total_amount': quotation_data.get('total', 0)
+        }
+
+        # Render the template
+        doc.render(context)
+        
+        # Save the document
+        filename = f"quotation_{quotation_data['ref_number']}.docx"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        doc.save(filepath)
+
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+
+    except Exception as e:
+        import traceback
+        print(f"Error in download_quotation: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to generate quotation: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     print("Starting Flask server on port 5000...")
