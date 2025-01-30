@@ -21,25 +21,49 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import CategoryIcon from '@mui/icons-material/Category';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
+const cardColors = {
+    Companies: '#2196f3', // Blue
+    Employees: '#4caf50', // Green
+    Clients: '#f57c00',   // Orange
+    Items: '#9c27b0',     // Purple
+    'Generate Quotation': '#e91e63', // Pink
+    Quotations: '#00bcd4'  // Cyan
+};
+
 const DashboardCard = ({ title, icon, description, onClick }) => (
     <Paper
         elevation={0}
         sx={{
-            p: 4,
+            p: 3,
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            borderRadius: 3,
+            borderRadius: 2,
             bgcolor: '#ffffff',
-            border: '1px solid',
-            borderColor: 'rgba(0, 0, 0, 0.06)',
+            border: '2px solid',
+            borderColor: `${cardColors[title]}20`,
+            position: 'relative',
+            overflow: 'hidden',
+            '&:before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '4px',
+                height: '100%',
+                backgroundColor: cardColors[title],
+                transition: 'all 0.3s ease',
+            },
             '&:hover': {
-                transform: 'translateY(-8px)',
-                boxShadow: '0 12px 24px rgba(0,0,0,0.08)',
-                borderColor: 'primary.main',
+                transform: 'translateY(-4px)',
+                boxShadow: `0 8px 16px ${cardColors[title]}20`,
+                borderColor: cardColors[title],
+                '&:before': {
+                    width: '6px',
+                },
             },
         }}
         onClick={onClick}
@@ -47,14 +71,20 @@ const DashboardCard = ({ title, icon, description, onClick }) => (
         <Box 
             sx={{ 
                 textAlign: 'center', 
-                mb: 3,
+                mb: 2,
                 transition: 'transform 0.3s ease',
                 '&:hover': {
-                    transform: 'scale(1.1)',
+                    transform: 'scale(1.05)',
                 }
             }}
         >
-            {React.cloneElement(icon, { sx: { fontSize: 48, color: 'primary.main' } })}
+            {React.cloneElement(icon, { 
+                sx: { 
+                    fontSize: 40, 
+                    color: cardColors[title],
+                    transition: 'all 0.3s ease',
+                } 
+            })}
         </Box>
         <Typography 
             variant="h6" 
@@ -63,19 +93,27 @@ const DashboardCard = ({ title, icon, description, onClick }) => (
             align="center"
             sx={{ 
                 fontWeight: 600,
-                color: 'primary.main',
-                fontSize: '1.25rem'
+                color: cardColors[title],
+                fontSize: '1.1rem',
+                transition: 'all 0.3s ease',
             }}
         >
             {title}
         </Typography>
-        <Divider sx={{ my: 2, width: '60%', mx: 'auto' }} />
+        <Divider 
+            sx={{ 
+                my: 1.5, 
+                width: '50%', 
+                mx: 'auto',
+                bgcolor: `${cardColors[title]}30`,
+            }} 
+        />
         <Typography 
             variant="body2" 
             color="text.secondary" 
             align="center"
             sx={{ 
-                lineHeight: 1.6,
+                lineHeight: 1.5,
                 flex: 1,
                 fontSize: '0.875rem'
             }}
@@ -89,42 +127,80 @@ const StatCard = ({ title, value, icon, color }) => (
     <Paper
         elevation={0}
         sx={{
-            p: 4,
+            p: 2.5,
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 3,
             height: '100%',
-            borderRadius: 3,
+            borderRadius: 2,
             bgcolor: '#ffffff',
-            border: '1px solid',
-            borderColor: 'rgba(0, 0, 0, 0.06)',
+            border: '2px solid',
+            borderColor: `${color}20`,
+            position: 'relative',
+            overflow: 'hidden',
             transition: 'all 0.3s ease',
+            '&:before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '4px',
+                height: '100%',
+                backgroundColor: color,
+                transition: 'all 0.3s ease',
+            },
             '&:hover': {
                 transform: 'translateY(-4px)',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+                boxShadow: `0 8px 16px ${color}20`,
                 borderColor: color,
+                '&:before': {
+                    width: '6px',
+                },
             },
         }}
     >
         <Box
             sx={{
                 bgcolor: `${color}08`,
-                p: 2.5,
-                borderRadius: 3,
+                p: 2,
+                borderRadius: 2,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: '1px solid',
                 borderColor: `${color}20`,
+                transition: 'all 0.3s ease',
             }}
         >
-            {React.cloneElement(icon, { sx: { fontSize: 36, color: color } })}
+            {React.cloneElement(icon, { 
+                sx: { 
+                    fontSize: 32, 
+                    color: color,
+                    transition: 'all 0.3s ease',
+                } 
+            })}
         </Box>
         <Box>
-            <Typography variant="h3" component="div" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
-                {value !== null ? value : <CircularProgress size={24} color="inherit" />}
+            <Typography 
+                variant="h4" 
+                component="div" 
+                sx={{ 
+                    fontWeight: 600, 
+                    mb: 0.5, 
+                    color: color,
+                    transition: 'all 0.3s ease',
+                }}
+            >
+                {value !== null ? value : <CircularProgress size={20} color="inherit" />}
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+            <Typography 
+                variant="body2" 
+                sx={{ 
+                    fontWeight: 500,
+                    color: `${color}99`,
+                    transition: 'all 0.3s ease',
+                }}
+            >
                 {title}
             </Typography>
         </Box>
@@ -218,8 +294,8 @@ export default function Dashboard() {
             sx={{ 
                 minHeight: '100vh', 
                 bgcolor: '#f8fafc',
-                py: 8,
-                px: 4
+                py: 4,
+                px: 3
             }}
         >
             <Container maxWidth="xl">
@@ -229,28 +305,28 @@ export default function Dashboard() {
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         alignItems: 'center', 
-                        mb: 8,
-                        pb: 4,
+                        mb: 4,
+                        pb: 3,
                         borderBottom: '1px solid',
                         borderColor: 'divider'
                     }}
                 >
                     <Box>
                         <Typography 
-                            variant="h3" 
+                            variant="h4" 
                             component="h1" 
                             sx={{ 
                                 fontWeight: 700,
                                 color: 'primary.main',
-                                mb: 1
+                                mb: 0.5
                             }}
                         >
                             ChemBio Lifesciences
                         </Typography>
                         <Typography 
-                            variant="h6" 
+                            variant="body1" 
                             color="text.secondary"
-                            sx={{ fontWeight: 400 }}
+                            sx={{ fontWeight: 500 }}
                         >
                             Welcome to your dashboard
                         </Typography>
@@ -272,35 +348,43 @@ export default function Dashboard() {
                 </Box>
 
                 {/* Stats Section */}
-                <Grid container spacing={6} sx={{ mb: 8 }}>
-                    <Grid item xs={12} sm={6} md={4}>
+                <Grid container spacing={3} sx={{ mb: 6 }}>
+                    <Grid item xs={12} md={4}>
                         <StatCard
                             title="Total Quotations"
                             value={stats.quotations}
                             icon={<ReceiptIcon />}
-                            color="#1976d2"
+                            color={cardColors.Quotations}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
+                    <Grid item xs={12} md={4}>
                         <StatCard
-                            title="Total Clients"
+                            title="Active Clients"
                             value={stats.clients}
                             icon={<GroupsIcon />}
-                            color="#2e7d32"
+                            color={cardColors.Clients}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
+                    <Grid item xs={12} md={4}>
                         <StatCard
-                            title="Total Items"
+                            title="Product Items"
                             value={stats.items}
                             icon={<CategoryIcon />}
-                            color="#ed6c02"
+                            color={cardColors.Items}
                         />
                     </Grid>
                 </Grid>
 
-                {/* Main Cards Grid */}
-                <Grid container spacing={6}>
+                {/* Main Actions Grid */}
+                <Grid 
+                    container 
+                    spacing={3} 
+                    sx={{ 
+                        '& > .MuiGrid-item': {
+                            mt: 3, // Add top margin to each grid item
+                        }
+                    }}
+                >
                     {dashboardItems.map((item, index) => (
                         <Grid item xs={12} sm={6} md={4} key={index}>
                             <DashboardCard {...item} />
