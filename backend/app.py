@@ -453,9 +453,10 @@ def generate_quote(quotation_id):
         # Add QUOTATION/PERFORMA INVOICE title
         title = doc.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title.add_run('QUOTATION/PERFORMA INVOICE')  # Removed extra newlines
         title.runs[0].font.bold = True
         title.runs[0].font.size = Pt(12)
+        title.paragraph_format.space_after = Pt(4)  # Small space after title
 
         # Add reference number and date
         ref_date = doc.add_table(rows=1, cols=2)
@@ -466,12 +467,14 @@ def generate_quote(quotation_id):
         date_cell.text = f"Date: {quotation_data['date'][:10]}"
         date_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-        # Add spacing after header
-        doc.add_paragraph()
+        # Add spacing after header - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
         # Set default font size for the document
         style = doc.styles['Normal']
-        style.font.size = Pt(9)
+        style.font.size = Pt(8)  # Reduced from 9 to 8
+        style.paragraph_format.space_after = Pt(0)  # Remove space after paragraphs
+        style.paragraph_format.space_before = Pt(0)  # Remove space before paragraphs
 
         # Add client details
         to_table = doc.add_table(rows=2, cols=1)
@@ -509,30 +512,42 @@ def generate_quote(quotation_id):
                                     '</w:tcBorders>')
                 tcPr.append(tcBorders)
         
-        # Add spacing after client details
-        doc.add_paragraph()
+        # Add spacing after client details - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
-        # Add greeting text
+        # Add greeting text with reduced spacing
         greeting = doc.add_paragraph()
+        greeting.paragraph_format.space_after = Pt(2)
         greeting.add_run("Dear Sir/Madam,\n")
-        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:\n")
+        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:")
         
-        # Add spacing after greeting
-        doc.add_paragraph()
+        # Add spacing after greeting - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add items table
         doc.add_paragraph().add_run('Items:').bold = True
-        table = doc.add_table(rows=1, cols=14)  # Changed to 14 columns
+        table = doc.add_table(rows=1, cols=14)
         table.style = 'Table Grid'
         
-        # Set header row
+        # Set header row with blue background and white text
         header_cells = table.rows[0].cells
         headers = ['S.No', 'Cat No.', 'Description', 'Pack Size', 'HSN Code', 'Qty', 'Unit Rate', 'Discounted Price', 'Expanded Price', 'GST %', 'GST', 'Total Value', 'Lead Time', 'Brand']
+        
+        # Apply blue background and white text to headers
         for i, text in enumerate(headers):
-            header_cells[i].text = text
-            header_cells[i].paragraphs[0].runs[0].bold = True
-            header_cells[i].paragraphs[0].runs[0].font.size = Pt(8)  # Set header font size
-            header_cells[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell = header_cells[i]
+            # Clear any existing content
+            cell.text = ""
+            paragraph = cell.paragraphs[0]
+            run = paragraph.add_run(text)
+            run.font.bold = True
+            run.font.size = Pt(8)
+            run.font.color.rgb = RGBColor(255, 255, 255)
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Set blue background for header cell
+            shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+            cell._tc.get_or_add_tcPr().append(shading_elm)
         
         # Add item rows
         items = data.get('items', [])
@@ -597,16 +612,112 @@ def generate_quote(quotation_id):
         for cell in table.columns[13].cells:  # Brand
             cell.width = Inches(0.5)
         
-        # Add totals
-        doc.add_paragraph()
-        totals = doc.add_paragraph()
-        totals.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        totals.add_run(f"Sub Total: ₹{data.get('total', 0):.2f}\n")
-        totals.add_run(f"Total GST: ₹{data.get('totalGST', 0):.2f}\n")
-        grand_total = totals.add_run(f"Grand Total: ₹{data.get('total', 0):.2f}")
-        grand_total.bold = True
+        # Set optimized column widths for better fit
+        for cell in table.columns[0].cells:  # S.No
+            cell.width = Inches(0.3)
+        for cell in table.columns[1].cells:  # Cat No.
+            cell.width = Inches(0.8)
+        for cell in table.columns[2].cells:  # Description
+            cell.width = Inches(2.0)
+        for cell in table.columns[3].cells:  # Pack Size
+            cell.width = Inches(0.5)
+        for cell in table.columns[4].cells:  # HSN Code
+            cell.width = Inches(0.8)
+        for cell in table.columns[5].cells:  # Qty
+            cell.width = Inches(0.4)
+        for cell in table.columns[6].cells:  # Unit Rate
+            cell.width = Inches(0.8)
+        for cell in table.columns[7].cells:  # Discounted Price
+            cell.width = Inches(0.8)
+        for cell in table.columns[8].cells:  # Expanded Price
+            cell.width = Inches(0.8)
+        for cell in table.columns[9].cells:  # GST %
+            cell.width = Inches(0.4)
+        for cell in table.columns[10].cells:  # GST
+            cell.width = Inches(0.6)
+        for cell in table.columns[11].cells:  # Total Value
+            cell.width = Inches(0.8)
+        for cell in table.columns[12].cells:  # Lead Time
+            cell.width = Inches(0.6)
+        for cell in table.columns[13].cells:  # Brand
+            cell.width = Inches(0.6)
+
+        # Add spacing before totals
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
-        # Add terms and conditions
+        # Create totals table with specific width and styling
+        totals_table = doc.add_table(rows=3, cols=2)
+        totals_table.style = 'Table Grid'
+        totals_table.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Set the width of the totals table columns
+        for cell in totals_table.columns[0].cells:  # Labels
+            cell.width = Inches(1.2)
+        for cell in totals_table.columns[1].cells:  # Values
+            cell.width = Inches(1.0)
+        
+        # Add Sub Total row
+        sub_total_cell = totals_table.cell(0, 0)
+        sub_total_cell.text = ""  # Clear existing content
+        sub_total_label = sub_total_cell.paragraphs[0].add_run("Sub Total:")
+        sub_total_label.font.size = Pt(8)
+        sub_total_label.font.bold = True
+        
+        sub_total_value_cell = totals_table.cell(0, 1)
+        sub_total_value_cell.text = ""  # Clear existing content
+        sub_total_value = sub_total_value_cell.paragraphs[0].add_run(f"₹{data.get('subTotal', 0):.2f}")
+        sub_total_value.font.size = Pt(8)
+        
+        # Add Total GST row
+        gst_cell = totals_table.cell(1, 0)
+        gst_cell.text = ""  # Clear existing content
+        gst_label = gst_cell.paragraphs[0].add_run("Total GST:")
+        gst_label.font.size = Pt(8)
+        gst_label.font.bold = True
+        
+        gst_value_cell = totals_table.cell(1, 1)
+        gst_value_cell.text = ""  # Clear existing content
+        gst_value = gst_value_cell.paragraphs[0].add_run(f"₹{data.get('totalGST', 0):.2f}")
+        gst_value.font.size = Pt(8)
+        
+        # Add Grand Total row with blue background
+        grand_total_cell = totals_table.cell(2, 0)
+        grand_total_cell.text = ""  # Clear existing content
+        grand_total_label = grand_total_cell.paragraphs[0].add_run("Grand Total:")
+        grand_total_label.font.size = Pt(8)
+        grand_total_label.font.bold = True
+        grand_total_label.font.color.rgb = RGBColor(255, 255, 255)
+        
+        grand_total_value_cell = totals_table.cell(2, 1)
+        grand_total_value_cell.text = ""  # Clear existing content
+        grand_total_value = grand_total_value_cell.paragraphs[0].add_run(f"₹{data.get('grandTotal', 0):.2f}")
+        grand_total_value.font.size = Pt(8)
+        grand_total_value.font.bold = True
+        grand_total_value.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set blue background for grand total row
+        for cell in [grand_total_cell, grand_total_value_cell]:
+            shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+            cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Right-align all cells in the totals table and set thin borders
+        for row in totals_table.rows:
+            for cell in row.cells:
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                # Set thin borders
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                '<w:top w:val="single" w:sz="2"/>' +
+                                '<w:left w:val="single" w:sz="2"/>' +
+                                '<w:bottom w:val="single" w:sz="2"/>' +
+                                '<w:right w:val="single" w:sz="2"/>' +
+                                '</w:tcBorders>')
+                tcPr.append(tcBorders)
+        
+        # Add spacing after totals table
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+        # Add Terms & Conditions section with blue header
         terms_table = doc.add_table(rows=1, cols=1)
         terms_table.style = 'Table Grid'
         
@@ -616,7 +727,7 @@ def generate_quote(quotation_id):
         header_run = header_paragraph.add_run('Terms & Conditions')
         header_run.font.bold = True
         header_run.font.color.rgb = RGBColor(255, 255, 255)
-        header_run.font.size = Pt(11)
+        header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -632,10 +743,11 @@ def generate_quote(quotation_id):
                             '</w:tcBorders>')
         tcPr.append(tcBorders)
         
-        # Add payment terms and other terms as bullet points
+        # Add terms list with reduced spacing
         terms_list = doc.add_paragraph()
         terms_list.style = doc.styles['Normal']
-        terms_list.paragraph_format.space_before = Pt(6)
+        terms_list.paragraph_format.space_before = Pt(2)
+        terms_list.paragraph_format.space_after = Pt(2)
         
         # Add payment terms
         payment_term = terms_list.add_run(f"1) {data.get('paymentTerms', '')}\n")
@@ -646,8 +758,8 @@ def generate_quote(quotation_id):
             term_text = terms_list.add_run(f"{idx}) {term}\n")
             term_text.font.size = Pt(8)
         
-        # Add spacing
-        doc.add_paragraph('\n')
+        # Add spacing before Bank Details section
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add Bank Details section
         bank_table = doc.add_table(rows=1, cols=1)
@@ -659,7 +771,7 @@ def generate_quote(quotation_id):
         bank_header_run = bank_header_paragraph.add_run('Bank Details')
         bank_header_run.font.bold = True
         bank_header_run.font.color.rgb = RGBColor(255, 255, 255)
-        bank_header_run.font.size = Pt(11)
+        bank_header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         bank_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -675,15 +787,16 @@ def generate_quote(quotation_id):
                             '</w:tcBorders>')
         bank_tcPr.append(bank_tcBorders)
         
-        # Add bank details content
+        # Add bank details with reduced spacing
         bank_details = doc.add_paragraph()
         bank_details.style = doc.styles['Normal']
-        bank_details.paragraph_format.space_before = Pt(6)
+        bank_details.paragraph_format.space_before = Pt(2)
+        bank_details.paragraph_format.space_after = Pt(2)
         bank_details_text = bank_details.add_run(f"HDFC BANK LTD. Account No: {data.get('company', {}).get('account_number', '')} ; NEFT/RTGS IFCS : {data.get('company', {}).get('ifsc_code', '')} Branch code:{data.get('company', {}).get('branch_code', '')} ; Micro code : {data.get('company', {}).get('micro_code', '')} ;Account type: Current account")
         bank_details_text.font.size = Pt(8)
         
-        # Add spacing before quotation created by section
-        doc.add_paragraph('\n')
+        # Add spacing before Quotation Created By section
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add Quotation Created By section
         created_by_table = doc.add_table(rows=1, cols=1)
@@ -695,7 +808,7 @@ def generate_quote(quotation_id):
         created_by_header_run = created_by_header_paragraph.add_run('Quotation Created By')
         created_by_header_run.font.bold = True
         created_by_header_run.font.color.rgb = RGBColor(255, 255, 255)
-        created_by_header_run.font.size = Pt(11)
+        created_by_header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         created_by_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -709,12 +822,13 @@ def generate_quote(quotation_id):
                             '<w:bottom w:val="nil"/>' +
                             '<w:right w:val="nil"/>' +
                             '</w:tcBorders>')
-        created_by_tcPr.append(created_by_tcBorders)
+        created_by_tcPr.append(tcBorders)
         
-        # Add employee details content
+        # Add employee details with reduced spacing
         employee_details = doc.add_paragraph()
         employee_details.style = doc.styles['Normal']
-        employee_details.paragraph_format.space_before = Pt(6)
+        employee_details.paragraph_format.space_before = Pt(2)
+        employee_details.paragraph_format.space_after = Pt(2)
         employee_name = data.get('employee', {}).get('name', '')
         employee_phone = data.get('employee', {}).get('phone_number', '')  # Changed from mobile to phone_number
         employee_email = data.get('employee', {}).get('email', '')
@@ -730,8 +844,9 @@ def generate_quote(quotation_id):
         # Add spacing before signature
         doc.add_paragraph('\n')
         
-        # Add signature section at the bottom
+        # Add signature section with reduced spacing
         signature_section = doc.add_paragraph()
+        signature_section.paragraph_format.space_before = Pt(4)
         signature_section.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         
         # Add "For COMPANY NAME" text
@@ -1091,14 +1206,16 @@ def generate_quotation():
         # Set very narrow margins
         sections = doc.sections
         for section in sections:
-            section.top_margin = Inches(0.3)    # 0.3 inch top margin
-            section.bottom_margin = Inches(0.3)  # 0.3 inch bottom margin
-            section.left_margin = Inches(0.3)    # 0.3 inch left margin
-            section.right_margin = Inches(0.3)   # 0.3 inch right margin
+            section.top_margin = Inches(0.2)    # Reduced from 0.3 to 0.2
+            section.bottom_margin = Inches(0.2)  # Reduced from 0.3 to 0.2
+            section.left_margin = Inches(0.3)    # Keep left margin
+            section.right_margin = Inches(0.3)   # Keep right margin
         
         # Set default font size for the document
         style = doc.styles['Normal']
-        style.font.size = Pt(8)  # Changed from 9 to 8
+        style.font.size = Pt(8)  # Reduced from 9 to 8
+        style.paragraph_format.space_after = Pt(0)  # Remove space after paragraphs
+        style.paragraph_format.space_before = Pt(0)  # Remove space before paragraphs
         
         # Add header table
         header_table = doc.add_table(rows=4, cols=1)
@@ -1158,9 +1275,10 @@ def generate_quotation():
         # Add QUOTATION/PERFORMA INVOICE title
         title = doc.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title.add_run('\nQUOTATION/PERFORMA INVOICE\n')
+        title.add_run('QUOTATION/PERFORMA INVOICE')  # Removed extra newlines
         title.runs[0].font.bold = True
         title.runs[0].font.size = Pt(12)
+        title.paragraph_format.space_after = Pt(4)  # Small space after title
 
         # Add reference number and date
         ref_date = doc.add_table(rows=1, cols=2)
@@ -1171,12 +1289,8 @@ def generate_quotation():
         date_cell.text = f"Date: {data.get('quotationDate', '')}"
         date_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-        # Add spacing after header
-        doc.add_paragraph()
-
-        # Set default font size for the document
-        style = doc.styles['Normal']
-        style.font.size = Pt(9)
+        # Add spacing after header - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
         # Add client details
         to_table = doc.add_table(rows=2, cols=1)
@@ -1214,31 +1328,42 @@ def generate_quotation():
                                     '</w:tcBorders>')
                 tcPr.append(tcBorders)
         
-        # Add spacing after client details
-        doc.add_paragraph()
+        # Add spacing after client details - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
-        # Add greeting text
+        # Add greeting text with reduced spacing
         greeting = doc.add_paragraph()
+        greeting.paragraph_format.space_after = Pt(2)
         greeting.add_run("Dear Sir/Madam,\n")
-        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:\n")
+        greeting.add_run("Thank you for your enquiry. We are pleased to quote our best prices as under:")
         
-        # Add spacing after greeting
-        doc.add_paragraph()
+        # Add spacing after greeting - reduced
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add items table
         doc.add_paragraph().add_run('Items:').bold = True
         table = doc.add_table(rows=1, cols=14)
         table.style = 'Table Grid'
-        table.allow_autofit = True  # Enable auto-fitting
         
-        # Set header row with smaller font
+        # Set header row with blue background and white text
         header_cells = table.rows[0].cells
         headers = ['S.No', 'Cat No.', 'Description', 'Pack Size', 'HSN Code', 'Qty', 'Unit Rate', 'Discounted Price', 'Expanded Price', 'GST %', 'GST', 'Total Value', 'Lead Time', 'Brand']
+        
+        # Apply blue background and white text to headers
         for i, text in enumerate(headers):
-            header_cells[i].text = text
-            header_cells[i].paragraphs[0].runs[0].bold = True
-            header_cells[i].paragraphs[0].runs[0].font.size = Pt(8)  # Set header font size
-            header_cells[i].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell = header_cells[i]
+            # Clear any existing content
+            cell.text = ""
+            paragraph = cell.paragraphs[0]
+            run = paragraph.add_run(text)
+            run.font.bold = True
+            run.font.size = Pt(8)
+            run.font.color.rgb = RGBColor(255, 255, 255)
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Set blue background for header cell
+            shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+            cell._tc.get_or_add_tcPr().append(shading_elm)
         
         # Add item rows
         items = data.get('items', [])
@@ -1303,16 +1428,112 @@ def generate_quotation():
         for cell in table.columns[13].cells:  # Brand
             cell.width = Inches(0.5)
         
-        # Add totals
-        doc.add_paragraph()
-        totals = doc.add_paragraph()
-        totals.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        totals.add_run(f"Sub Total: ₹{data.get('subTotal', 0):.2f}\n")
-        totals.add_run(f"Total GST: ₹{data.get('totalGST', 0):.2f}\n")
-        grand_total = totals.add_run(f"Grand Total: ₹{data.get('grandTotal', 0):.2f}")
-        grand_total.bold = True
+        # Set optimized column widths for better fit
+        for cell in table.columns[0].cells:  # S.No
+            cell.width = Inches(0.3)
+        for cell in table.columns[1].cells:  # Cat No.
+            cell.width = Inches(0.8)
+        for cell in table.columns[2].cells:  # Description
+            cell.width = Inches(2.0)
+        for cell in table.columns[3].cells:  # Pack Size
+            cell.width = Inches(0.5)
+        for cell in table.columns[4].cells:  # HSN Code
+            cell.width = Inches(0.8)
+        for cell in table.columns[5].cells:  # Qty
+            cell.width = Inches(0.4)
+        for cell in table.columns[6].cells:  # Unit Rate
+            cell.width = Inches(0.8)
+        for cell in table.columns[7].cells:  # Discounted Price
+            cell.width = Inches(0.8)
+        for cell in table.columns[8].cells:  # Expanded Price
+            cell.width = Inches(0.8)
+        for cell in table.columns[9].cells:  # GST %
+            cell.width = Inches(0.4)
+        for cell in table.columns[10].cells:  # GST
+            cell.width = Inches(0.6)
+        for cell in table.columns[11].cells:  # Total Value
+            cell.width = Inches(0.8)
+        for cell in table.columns[12].cells:  # Lead Time
+            cell.width = Inches(0.6)
+        for cell in table.columns[13].cells:  # Brand
+            cell.width = Inches(0.6)
+
+        # Add spacing before totals
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
-        # Add terms and conditions
+        # Create totals table with specific width and styling
+        totals_table = doc.add_table(rows=3, cols=2)
+        totals_table.style = 'Table Grid'
+        totals_table.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Set the width of the totals table columns
+        for cell in totals_table.columns[0].cells:  # Labels
+            cell.width = Inches(1.2)
+        for cell in totals_table.columns[1].cells:  # Values
+            cell.width = Inches(1.0)
+        
+        # Add Sub Total row
+        sub_total_cell = totals_table.cell(0, 0)
+        sub_total_cell.text = ""  # Clear existing content
+        sub_total_label = sub_total_cell.paragraphs[0].add_run("Sub Total:")
+        sub_total_label.font.size = Pt(8)
+        sub_total_label.font.bold = True
+        
+        sub_total_value_cell = totals_table.cell(0, 1)
+        sub_total_value_cell.text = ""  # Clear existing content
+        sub_total_value = sub_total_value_cell.paragraphs[0].add_run(f"₹{data.get('subTotal', 0):.2f}")
+        sub_total_value.font.size = Pt(8)
+        
+        # Add Total GST row
+        gst_cell = totals_table.cell(1, 0)
+        gst_cell.text = ""  # Clear existing content
+        gst_label = gst_cell.paragraphs[0].add_run("Total GST:")
+        gst_label.font.size = Pt(8)
+        gst_label.font.bold = True
+        
+        gst_value_cell = totals_table.cell(1, 1)
+        gst_value_cell.text = ""  # Clear existing content
+        gst_value = gst_value_cell.paragraphs[0].add_run(f"₹{data.get('totalGST', 0):.2f}")
+        gst_value.font.size = Pt(8)
+        
+        # Add Grand Total row with blue background
+        grand_total_cell = totals_table.cell(2, 0)
+        grand_total_cell.text = ""  # Clear existing content
+        grand_total_label = grand_total_cell.paragraphs[0].add_run("Grand Total:")
+        grand_total_label.font.size = Pt(8)
+        grand_total_label.font.bold = True
+        grand_total_label.font.color.rgb = RGBColor(255, 255, 255)
+        
+        grand_total_value_cell = totals_table.cell(2, 1)
+        grand_total_value_cell.text = ""  # Clear existing content
+        grand_total_value = grand_total_value_cell.paragraphs[0].add_run(f"₹{data.get('grandTotal', 0):.2f}")
+        grand_total_value.font.size = Pt(8)
+        grand_total_value.font.bold = True
+        grand_total_value.font.color.rgb = RGBColor(255, 255, 255)
+        
+        # Set blue background for grand total row
+        for cell in [grand_total_cell, grand_total_value_cell]:
+            shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
+            cell._tc.get_or_add_tcPr().append(shading_elm)
+        
+        # Right-align all cells in the totals table and set thin borders
+        for row in totals_table.rows:
+            for cell in row.cells:
+                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                # Set thin borders
+                tcPr = cell._tc.get_or_add_tcPr()
+                tcBorders = parse_xml(f'<w:tcBorders {nsdecls("w")}>' +
+                                '<w:top w:val="single" w:sz="2"/>' +
+                                '<w:left w:val="single" w:sz="2"/>' +
+                                '<w:bottom w:val="single" w:sz="2"/>' +
+                                '<w:right w:val="single" w:sz="2"/>' +
+                                '</w:tcBorders>')
+                tcPr.append(tcBorders)
+        
+        # Add spacing after totals table
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+        # Add Terms & Conditions section with blue header
         terms_table = doc.add_table(rows=1, cols=1)
         terms_table.style = 'Table Grid'
         
@@ -1322,7 +1543,7 @@ def generate_quotation():
         header_run = header_paragraph.add_run('Terms & Conditions')
         header_run.font.bold = True
         header_run.font.color.rgb = RGBColor(255, 255, 255)
-        header_run.font.size = Pt(11)
+        header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -1338,10 +1559,11 @@ def generate_quotation():
                             '</w:tcBorders>')
         tcPr.append(tcBorders)
         
-        # Add payment terms and other terms as bullet points
+        # Add terms list with reduced spacing
         terms_list = doc.add_paragraph()
         terms_list.style = doc.styles['Normal']
-        terms_list.paragraph_format.space_before = Pt(6)
+        terms_list.paragraph_format.space_before = Pt(2)
+        terms_list.paragraph_format.space_after = Pt(2)
         
         # Add payment terms
         payment_term = terms_list.add_run(f"1) {data.get('paymentTerms', '')}\n")
@@ -1352,8 +1574,8 @@ def generate_quotation():
             term_text = terms_list.add_run(f"{idx}) {term}\n")
             term_text.font.size = Pt(8)
         
-        # Add spacing
-        doc.add_paragraph('\n')
+        # Add spacing before Bank Details section
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add Bank Details section
         bank_table = doc.add_table(rows=1, cols=1)
@@ -1365,7 +1587,7 @@ def generate_quotation():
         bank_header_run = bank_header_paragraph.add_run('Bank Details')
         bank_header_run.font.bold = True
         bank_header_run.font.color.rgb = RGBColor(255, 255, 255)
-        bank_header_run.font.size = Pt(11)
+        bank_header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         bank_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -1381,15 +1603,16 @@ def generate_quotation():
                             '</w:tcBorders>')
         bank_tcPr.append(bank_tcBorders)
         
-        # Add bank details content
+        # Add bank details with reduced spacing
         bank_details = doc.add_paragraph()
         bank_details.style = doc.styles['Normal']
-        bank_details.paragraph_format.space_before = Pt(6)
+        bank_details.paragraph_format.space_before = Pt(2)
+        bank_details.paragraph_format.space_after = Pt(2)
         bank_details_text = bank_details.add_run(f"HDFC BANK LTD. Account No: {data.get('company', {}).get('account_number', '')} ; NEFT/RTGS IFCS : {data.get('company', {}).get('ifsc_code', '')} Branch code:{data.get('company', {}).get('branch_code', '')} ; Micro code : {data.get('company', {}).get('micro_code', '')} ;Account type: Current account")
         bank_details_text.font.size = Pt(8)
         
-        # Add spacing before quotation created by section
-        doc.add_paragraph('\n')
+        # Add spacing before Quotation Created By section
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
         
         # Add Quotation Created By section
         created_by_table = doc.add_table(rows=1, cols=1)
@@ -1401,7 +1624,7 @@ def generate_quotation():
         created_by_header_run = created_by_header_paragraph.add_run('Quotation Created By')
         created_by_header_run.font.bold = True
         created_by_header_run.font.color.rgb = RGBColor(255, 255, 255)
-        created_by_header_run.font.size = Pt(11)
+        created_by_header_run.font.size = Pt(9)  # Changed from 11 to 9
         
         # Set blue background for header cell
         created_by_shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1B4F8C"/>')
@@ -1415,12 +1638,13 @@ def generate_quotation():
                             '<w:bottom w:val="nil"/>' +
                             '<w:right w:val="nil"/>' +
                             '</w:tcBorders>')
-        created_by_tcPr.append(created_by_tcBorders)
+        created_by_tcPr.append(tcBorders)
         
-        # Add employee details content
+        # Add employee details with reduced spacing
         employee_details = doc.add_paragraph()
         employee_details.style = doc.styles['Normal']
-        employee_details.paragraph_format.space_before = Pt(6)
+        employee_details.paragraph_format.space_before = Pt(2)
+        employee_details.paragraph_format.space_after = Pt(2)
         employee_name = data.get('employee', {}).get('name', '')
         employee_phone = data.get('employee', {}).get('phone_number', '')  # Changed from mobile to phone_number
         employee_email = data.get('employee', {}).get('email', '')
@@ -1436,8 +1660,9 @@ def generate_quotation():
         # Add spacing before signature
         doc.add_paragraph('\n')
         
-        # Add signature section at the bottom
+        # Add signature section with reduced spacing
         signature_section = doc.add_paragraph()
+        signature_section.paragraph_format.space_before = Pt(4)
         signature_section.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         
         # Add "For COMPANY NAME" text
